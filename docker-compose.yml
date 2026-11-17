@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: libtrack-postgres
+    environment:
+      POSTGRES_DB: libtrack
+      POSTGRES_USER: libtrack
+      POSTGRES_PASSWORD: ${LIBTRACK_DB_PASSWORD:-libtrack_dev_password}
+    ports:
+      - "5433:5432"
+    volumes:
+      - libtrack-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U libtrack -d libtrack"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  libtrack-postgres-data:
+
