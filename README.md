@@ -10,34 +10,44 @@ LibTrack is a staff workspace for operating a school or college library. This re
 - Supabase-hosted PostgreSQL in deployment; PostgreSQL 16 for local development
 - Flyway schema migrations
 
-## What is in the ground app
+## What is implemented
 
-- Responsive librarian dashboard shell with overview, circulation, due-today, and recent-activity panels.
-- Spring Boot API with health endpoint, request validation error format, CORS, and starter HTTP Basic access control.
-- PostgreSQL schema for staff, members, catalog titles/copies, loans, holds, fee ledger, policy settings, and audit events.
-- Database uniqueness constraints prevent duplicate member numbers/barcodes and multiple active loans for one physical copy.
+- Supabase Auth email/password sign-in in the React client. The client sends its short-lived bearer token to the Spring API and never holds database credentials.
+- Spring validates Supabase JWT issuer, audience, signature, and time claims. Configure `SUPABASE_AUTH_JWT_MODE=JWKS` for asymmetric project signing. Legacy `HS256` tokens are checked server-to-server through Supabase Auth `/user`; no shared JWT signing secret is copied into LibTrack.
+- The API resolves each authenticated subject through `public.staff_users`. Inactive or unlinked users are denied on every protected endpoint. Roles come only from the database.
+- Supabase PostgreSQL migrations, separate application and Flyway credentials, API health, live dashboard, catalogue and member search, pagination, create/edit APIs, and audit events.
+- Existing schema constraints prevent duplicate member numbers/barcodes and multiple active loans for one physical copy.
 
-Dashboard figures and activity are illustrative placeholders. Catalog, member, and circulation screens will become live as their API modules are implemented.
+Dashboard, catalog, and member data are read from the configured database. Circulation, staff administration, settings, and audit views are being completed; do not treat this build as deployment-ready until the checks below pass.
 
 ## Local setup
 
 1. Install Java 21, Maven 3.9+, Node.js 20+, npm, and Docker Desktop.
-2. Copy `.env.example` to `.env`; change `LIBTRACK_ADMIN_PASSWORD` before use.
-3. Start the local database: `docker compose up -d postgres`.
+2. Copy `.env.example` to `.env`, then fill the local database values and Supabase project URL/issuer/public publishable key. Spring Boot and Vite do not automatically load `.env`; export values in the terminal or use a trusted environment loader.
+3. Start the local database: `docker compose up -d postgres`. A fresh local volume gets a small `auth.users` fixture so Flyway can validate the staff foreign key. Existing volumes are not deleted or reset; if it is an older volume, apply the fixture SQL from `docker/postgres/init/01-local-auth-fixture.sql` once as the database owner.
 4. Start the API with environment variables loaded in your shell. In PowerShell:
 
    ```powershell
    $env:LIBTRACK_DB_URL = "jdbc:postgresql://localhost:5433/libtrack"
    $env:LIBTRACK_DB_USER = "libtrack"
    $env:LIBTRACK_DB_PASSWORD = "libtrack_dev_password"
-   $env:LIBTRACK_ADMIN_USERNAME = "admin"
-   $env:LIBTRACK_ADMIN_PASSWORD = "change-this-before-running"
-   $env:LIBTRACK_CORS_ORIGIN = "http://localhost:5173"
+   $env:SUPABASE_AUTH_ISSUER_URI = "https://<project-ref>.supabase.co/auth/v1"
+   $env:SUPABASE_AUTH_JWT_MODE = "JWKS"
+   $env:LIBTRACK_CORS_ORIGINS = "http://localhost:5173"
    mvn spring-boot:run
    ```
 
-5. In a second terminal run `npm install` then `npm run dev`.
-6. Open the Vite URL shown in the terminal. The browser calls the Spring Boot API through Vite's `/api` proxy. The starter login is the username and password configured for the API.
+5. In a second terminal set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, run `npm install`, then `npm run dev`.
+6. Create or invite a staff user with Supabase Auth, then link their Auth UUID to a LibTrack staff record. Existing rows with a matching email are auto-linked by migration V2. For the first admin only, use a database-owner session after migration:
+
+   ```sql
+   INSERT INTO public.staff_users (auth_user_id, login_identifier, display_name, role)
+   VALUES ('<auth-user-uuid>', '<email>', '<display-name>', 'ADMIN');
+   ```
+
+   The role is stored server-side. Never grant admin by editing Supabase user metadata.
+
+7. The browser calls Spring through Vite's `/api` proxy. In production, set `VITE_API_BASE_URL` to the Spring API origin and `LIBTRACK_CORS_ORIGINS` to the exact deployed frontend origin.
 
 The `.env` file documents values but Spring Boot and Vite do not automatically load it. Set variables in the terminal, or use a trusted local environment loader. Never commit `.env`.
 
@@ -46,25 +56,36 @@ The `.env` file documents values but Spring Boot and Vite do not automatically l
 Create a Supabase project and copy the JDBC connection details from **Project Settings → Database**. Configure the API process with:
 
 ```text
-SUPABASE_DB_URL=jdbc:postgresql://<host>:<port>/postgres?sslmode=require
-SUPABASE_DB_USER=<database user>
-SUPABASE_DB_PASSWORD=<database password>
+SUPABASE_APP_DB_URL=jdbc:postgresql://<host>:<port>/postgres?sslmode=require
+SUPABASE_APP_DB_USER=<least-privilege runtime role>
+SUPABASE_APP_DB_PASSWORD=<runtime password>
+
+SUPABASE_FLYWAY_DB_URL=jdbc:postgresql://<host>:<port>/postgres?sslmode=require
+SUPABASE_FLYWAY_DB_USER=<migration role>
+SUPABASE_FLYWAY_DB_PASSWORD=<migration password>
+
+SUPABASE_AUTH_ISSUER_URI=https://<project-ref>.supabase.co/auth/v1
+SUPABASE_AUTH_AUDIENCE=authenticated
+SUPABASE_AUTH_JWT_MODE=JWKS
 ```
 
-Set `SUPABASE_DB_URL`, `SUPABASE_DB_USER`, and `SUPABASE_DB_PASSWORD` from the JDBC connection details. Use a database role that can apply Flyway schema migrations. The API and Flyway use the same database connection. Keep credentials in your host's secret manager. Flyway applies `src/main/resources/db/migration` at startup. The browser does not need a Supabase key because it only uses the Spring API.
+Use a direct PostgreSQL connection for persistent Spring hosting, or Supabase's **session** pooler where the host only supports IPv4; JDBC/Flyway must not use the transaction pooler. Require TLS. Keep the two database credentials and all API secrets in the host's secret manager. Do not expose either database credential through Vite. Set `FLYWAY_ENABLED=false` on API runtime instances and run reviewed migrations in a separate deployment job with the Flyway role. Only use `FLYWAY_ENABLED=true` locally or in that migration job.
+
+If the Supabase project still signs tokens with legacy HS256, set `SUPABASE_AUTH_JWT_MODE=LEGACY_HS256` and configure `SUPABASE_AUTH_PUBLISHABLE_KEY` server-side. Spring will ask Supabase Auth to validate each bearer token. Prefer moving to Supabase's asymmetric signing keys after reviewing the project-wide impact; do not rotate keys as part of app deployment.
 
 ## API foundation
 
 - `GET /api/v1/health` — public service status.
-- `GET /api/v1/session` — authenticated identity and roles (HTTP Basic).
+- `GET /api/v1/session` — authenticated database-linked staff identity and role.
+- `GET /api/v1/dashboard/summary` — live circulation and catalog counts.
+- `/api/v1/catalog/books` — searchable, paginated book metadata and physical copies.
+- `/api/v1/members` — searchable, paginated member records.
 - `GET /actuator/health` — Spring health including the database indicator.
-- Other routes require HTTP Basic using the configured starter administrator credentials.
-
-The starter account is in-memory and suitable only for getting the foundation running. Before production, replace it with persistent staff accounts, individual roles, password reset/account disablement workflows, and a deliberate session strategy.
+- All non-health routes require a valid Supabase bearer token and an active `staff_users` mapping.
 
 ## Database notes
 
-The initial migration creates the schema and inserts starter policy settings (14-day default loan, five-loan member limit, one renewal, three-day hold pickup window). Policy values should be reviewed with the library before live use. Fees are disabled until the library configures its currency and fee policy.
+The initial migration creates the schema and inserts starter policy settings (14-day default loan, five-loan member limit, one renewal, three-day hold pickup window). Policy values should be reviewed with the library before live use. Fees are disabled until the library configures its currency and fee policy. Migration V2 links staff Auth users by matching existing staff `login_identifier` to Auth email; unmatched accounts stay unlinked and are safely denied until an administrator links them.
 
 ## Project layout
 

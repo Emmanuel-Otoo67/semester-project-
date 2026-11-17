@@ -1,204 +1,117 @@
-import { useEffect, useState } from 'react';
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  BookCopy,
-  BookOpen,
-  CalendarDays,
-  ChevronDown,
-  CircleHelp,
-  Clock3,
-  LayoutDashboard,
-  LibraryBig,
-  Menu,
-  MoreHorizontal,
-  Plus,
-  Search,
-  Settings2,
-  ShieldCheck,
-  UsersRound,
-  X,
-} from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { ArrowRight, LibraryBig, LoaderCircle, LogOut, ShieldCheck } from 'lucide-react';
+import { AuthProvider, useAuth } from './auth/AuthProvider';
+import { apiFetch } from './api/http';
 
-type ApiHealth = { status: string; service: string; timestamp: string };
+export default function App() {
+  return <AuthProvider><WorkspaceGate /></AuthProvider>;
+}
 
-const navGroups = [
-  {
-    label: 'WORKSPACE',
-    items: [
-      { label: 'Overview', icon: LayoutDashboard, active: true },
-      { label: 'Catalog', icon: BookOpen },
-      { label: 'Members', icon: UsersRound },
-    ],
-  },
-  {
-    label: 'CIRCULATION',
-    items: [
-      { label: 'Loans', icon: BookCopy, count: '18' },
-      { label: 'Reservations', icon: CalendarDays, count: '6' },
-    ],
-  },
-];
-
-const activity = [
-  { initials: 'AM', name: 'Ama Mensah', action: 'checked out', title: 'Things Fall Apart', time: '09:42 AM', color: 'sage' },
-  { initials: 'KO', name: 'Kofi Owusu', action: 'returned', title: 'The River Between', time: '09:18 AM', color: 'peach' },
-  { initials: 'EA', name: 'Esi Agyeman', action: 'placed a hold on', title: 'Half of a Yellow Sun', time: '08:56 AM', color: 'blue' },
-  { initials: 'NA', name: 'Nana Asante', action: 'checked out', title: 'The Beautyful Ones Are Not Yet Born', time: '08:31 AM', color: 'lavender' },
-];
-
-function App() {
-  const [health, setHealth] = useState<'checking' | 'online' | 'offline'>('checking');
-  const [mobileNav, setMobileNav] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [username, setUsername] = useState('admin');
+function WorkspaceGate() {
+  const { loading, session, staff, error, configurationError, signIn, signOut, refresh } = useAuth();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [authHeader, setAuthHeader] = useState<string | null>(null);
-  const [loginError, setLoginError] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch('/api/v1/health', { signal: controller.signal, headers: authHeader ? { Authorization: authHeader } : undefined })
-      .then((response) => {
-        if (response.ok) return response.json() as Promise<ApiHealth>;
-        if (response.status === 401) setShowLogin(true);
-        throw new Error('API unavailable');
-      })
-      .then(() => setHealth('online'))
-      .catch(() => setHealth('offline'));
-    return () => controller.abort();
-  }, [authHeader]);
-
-  function signIn(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const token = btoa(`${username}:${password}`);
-    const header = `Basic ${token}`;
-    setLoginError('');
-    fetch('/api/v1/session', { headers: { Authorization: header } })
-      .then((response) => {
-        if (!response.ok) throw new Error('Credentials were not accepted.');
-        setAuthHeader(header);
-        setShowLogin(false);
-        setPassword('');
-      })
-      .catch(() => setLoginError('Could not sign in. Check that the API is running and the credentials match your environment.'));
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setSubmitting(true); setFormError(null);
+    try { await signIn(email, password); setPassword(''); }
+    catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Sign-in failed. Try again.'); }
+    finally { setSubmitting(false); }
   }
 
-  const statusLabel = health === 'online' ? 'All systems operational' : health === 'checking' ? 'Connecting to LibTrack' : 'API connection needed';
+  if (loading) return <main className="auth-shell"><div className="auth-card auth-loading"><LoaderCircle className="spin" /><span>Checking your LibTrack session…</span></div></main>;
 
-  return (
-    <div className="app-shell">
-      {mobileNav && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
-      <aside className={`sidebar ${mobileNav ? 'sidebar-open' : ''}`}>
-        <div className="brand-row">
-          <div className="brand-mark"><LibraryBig size={21} strokeWidth={2.1} /></div>
-          <div className="brand-name">libtrack<span>.</span></div>
-          <button className="icon-button sidebar-close" aria-label="Close menu" onClick={() => setMobileNav(false)}><X size={18} /></button>
-        </div>
+  if (session && staff) return <Workspace staff={staff} token={session.access_token} signOut={signOut} />;
 
-        <button className="library-switcher">
-          <span className="school-monogram">A</span>
-          <span className="switcher-copy"><strong>Akora College</strong><small>Library workspace</small></span>
-          <ChevronDown size={15} className="switcher-chevron" />
-        </button>
-
-        <nav className="primary-nav" aria-label="Main navigation">
-          {navGroups.map((group) => (
-            <div className="nav-group" key={group.label}>
-              <p className="nav-label">{group.label}</p>
-              {group.items.map(({ label, icon: Icon, active, count }) => (
-                <a className={`nav-item ${active ? 'active' : ''}`} href={`#${label.toLowerCase()}`} key={label} onClick={(event) => event.preventDefault()}>
-                  <Icon size={18} strokeWidth={1.8} /><span>{label}</span>{count && <span className="nav-count">{count}</span>}
-                </a>
-              ))}
-            </div>
-          ))}
-        </nav>
-
-        <div className="sidebar-bottom">
-          <div className="sidebar-help"><div className="help-icon"><CircleHelp size={17} /></div><div><strong>Need a hand?</strong><small>Visit the help centre</small></div><ArrowUpRight size={14} /></div>
-          <div className="staff-card">
-            <div className="staff-avatar">EA</div>
-            <div className="staff-copy"><strong>Efua Asare</strong><small>Head librarian</small></div>
-            <button className="icon-button staff-menu" aria-label="Staff menu"><MoreHorizontal size={18} /></button>
-          </div>
-        </div>
-      </aside>
-
-      <main className="main-area">
-        <header className="topbar">
-          <button className="icon-button mobile-menu" aria-label="Open menu" onClick={() => setMobileNav(true)}><Menu size={20} /></button>
-          <div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Overview</strong></div>
-          <div className="topbar-actions">
-            <div className={`system-status ${health}`}><span className="status-dot" />{statusLabel}</div>
-            <div className="topbar-divider" />
-            <button className="top-avatar" aria-label="Account menu">EA</button>
-          </div>
-        </header>
-
-        <div className="content-wrap">
-          <section className="welcome-row">
-            <div>
-              <div className="eyebrow"><span className="eyebrow-line" /> SUNDAY, 15 NOVEMBER 2026</div>
-              <h1>Good afternoon, Efua <span className="wave">✳</span></h1>
-              <p className="page-subtitle">Here’s what’s happening at your library today.</p>
-            </div>
-            <div className="welcome-actions"><button className="button button-quiet"><CalendarDays size={16} />This week<ChevronDown size={14} /></button><button className="button button-primary" onClick={() => setShowLogin(true)}><Plus size={17} />New checkout</button></div>
-          </section>
-
-          {health !== 'online' && <div className="connection-banner"><div className="connection-symbol"><ShieldCheck size={17} /></div><div><strong>{health === 'checking' ? 'Connecting your workspace' : 'Your API is not connected yet'}</strong><p>{health === 'checking' ? 'Waiting for the LibTrack service to respond.' : 'Start the Spring Boot API to enable live library operations. Dashboard figures below are sample data.'}</p></div><button onClick={() => setShowLogin(true)}>Connect <ArrowUpRight size={14} /></button></div>}
-
-          <section className="metrics-grid" aria-label="Library overview">
-            <MetricCard label="Titles in catalogue" value="2,486" change="4.8%" direction="up" note="vs. last month" icon={<BookOpen size={18} />} tone="green" />
-            <MetricCard label="Active members" value="1,204" change="2.1%" direction="up" note="vs. last month" icon={<UsersRound size={18} />} tone="blue" />
-            <MetricCard label="Currently on loan" value="318" change="12.4%" direction="up" note="vs. last month" icon={<BookCopy size={18} />} tone="peach" />
-            <MetricCard label="Overdue items" value="12" change="3 fewer" direction="down" note="than last week" icon={<Clock3 size={18} />} tone="lavender" />
-          </section>
-
-          <section className="dashboard-grid">
-            <article className="panel circulation-panel">
-              <div className="panel-heading"><div><div className="section-kicker">CIRCULATION</div><h2>Checkout activity</h2></div><button className="button button-quiet button-small">Last 7 days<ChevronDown size={13} /></button></div>
-              <div className="chart-summary"><strong>246</strong><span className="trend-chip"><ArrowUpRight size={13} /> 8.2%</span><span className="chart-summary-note">checkouts this week</span></div>
-              <div className="chart-area" aria-label="Checkout activity chart">
-                <div className="chart-y-labels"><span>60</span><span>40</span><span>20</span><span>0</span></div>
-                <div className="chart-content"><div className="chart-guides"><i /><i /><i /><i /></div><div className="chart-bars">{[{d:'Mon',h:44},{d:'Tue',h:68},{d:'Wed',h:52},{d:'Thu',h:82},{d:'Fri',h:62},{d:'Sat',h:36},{d:'Sun',h:48}].map((item) => <div className="bar-column" key={item.d}><div className="bar-pair"><span className="bar bar-prev" style={{height:`${Math.max(item.h - 18, 12)}%`}} /><span className="bar bar-current" style={{height:`${item.h}%`}} /></div><span className="bar-day">{item.d}</span></div>)}</div><div className="chart-legend"><span><i className="legend-current" />This week</span><span><i className="legend-previous" />Last week</span></div></div>
-              </div>
-            </article>
-
-            <article className="panel due-panel">
-              <div className="panel-heading"><div><div className="section-kicker">NEEDS ATTENTION</div><h2>Due back today</h2></div><button className="icon-button more-button" aria-label="More options"><MoreHorizontal size={19} /></button></div>
-              <div className="due-total"><strong>08</strong><span>items due today</span></div>
-              <div className="due-list">
-                <DueRow title="The River and the Source" author="Margaret Ogola" member="Nana A." color="peach" />
-                <DueRow title="Purple Hibiscus" author="Chimamanda Adichie" member="Kojo B." color="blue" />
-                <DueRow title="Anowa" author="Ama Ata Aidoo" member="Esi D." color="sage" />
-              </div>
-              <button className="text-link">View all due items <ArrowUpRight size={14} /></button>
-            </article>
-          </section>
-
-          <section className="panel activity-panel">
-            <div className="panel-heading activity-heading"><div><div className="section-kicker">LIVE UPDATES</div><h2>Recent activity</h2></div><div className="activity-controls"><label className="search-box"><Search size={15} /><input aria-label="Search activity" placeholder="Search activity" /></label><button className="button button-quiet button-small">All activity<ChevronDown size={13} /></button></div></div>
-            <div className="activity-table-wrap"><table className="activity-table"><thead><tr><th>MEMBER</th><th>ACTIVITY</th><th>TIME</th><th aria-label="More" /></tr></thead><tbody>{activity.map((item) => <tr key={item.name}><td><div className="member-cell"><div className={`member-avatar ${item.color}`}>{item.initials}</div><span>{item.name}</span></div></td><td><span className="activity-action">{item.action} </span><strong className="activity-title">{item.title}</strong></td><td className="time-cell">{item.time}</td><td><button className="icon-button row-more" aria-label={`More about ${item.name}`}><MoreHorizontal size={18} /></button></td></tr>)}</tbody></table></div>
-            <button className="table-footer">View all activity <ArrowUpRight size={14} /></button>
-          </section>
-
-          <footer className="page-footer"><span>© 2026 LibTrack</span><span><i />Your library, in good hands</span><a href="#settings" onClick={(event) => event.preventDefault()}><Settings2 size={14} />Workspace settings</a></footer>
-        </div>
-      </main>
-
-      {showLogin && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowLogin(false); }}><form className="login-modal" onSubmit={signIn}><div className="modal-icon"><ShieldCheck size={20} /></div><button type="button" className="icon-button modal-close" aria-label="Close" onClick={() => setShowLogin(false)}><X size={18} /></button><div className="section-kicker">LIBTRACK API</div><h2>Connect your workspace</h2><p>Enter the starter administrator credentials from your local environment configuration.</p><label>Username<input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" required /></label><label>Password<input value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="current-password" required /></label>{loginError && <p className="login-error" role="alert">{loginError}</p>}<button className="button button-primary modal-submit" type="submit">Sign in <ArrowUpRight size={15} /></button></form></div>}
-    </div>
-  );
+  return <main className="auth-shell"><section className="auth-card">
+    <div className="auth-brand"><span className="auth-brand-mark"><LibraryBig size={22} /></span><span>libtrack<span className="brand-dot">.</span></span></div>
+    <p className="auth-kicker">STAFF ACCESS</p><h1>Sign in to your library</h1>
+    <p className="auth-copy">Use the Supabase Auth account linked to your LibTrack staff profile.</p>
+    {configurationError && <div className="auth-alert" role="alert"><strong>Sign-in is not configured.</strong><span>Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY for this environment.</span></div>}
+    {error && <div className="auth-alert" role="alert"><strong>Staff access needs attention.</strong><span>{error}</span>{session && <button type="button" onClick={() => void refresh()}>Check again</button>}</div>}
+    <form className="auth-form" onSubmit={submit}>
+      <label htmlFor="staff-email">Email address</label><input id="staff-email" type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@school.edu" required />
+      <label htmlFor="staff-password">Password</label><input id="staff-password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+      {formError && <p className="auth-form-error" role="alert">{formError}</p>}
+      <button className="auth-primary" type="submit" disabled={submitting || configurationError}>{submitting ? <><LoaderCircle size={17} className="spin" /> Signing in…</> : <>Continue <ArrowRight size={17} /></>}</button>
+    </form>
+    <p className="auth-footnote">Access is managed by your library administrator.</p>
+  </section></main>;
 }
 
-function MetricCard({ label, value, change, direction, note, icon, tone }: { label: string; value: string; change: string; direction: 'up' | 'down'; note: string; icon: React.ReactNode; tone: string }) {
-  return <article className="metric-card"><div className="metric-top"><span>{label}</span><span className={`metric-icon ${tone}`}>{icon}</span></div><div className="metric-value">{value}</div><div className="metric-foot"><span className={`metric-change ${direction}`}>{direction === 'up' ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}{change}</span><span>{note}</span></div></article>;
+type Page<T> = { items: T[]; page: number; size: number; total: number };
+type Book = { id: string; title: string; isbn: string | null; publisher: string | null; publicationYear: number | null; authors: string; categories: string; copies: number; availableCopies: number };
+type Member = { id: string; libraryNumber: string; firstName: string; lastName: string; memberType: string; email: string | null; phone: string | null; status: string };
+type Dashboard = { titles: number; activeMembers: number; availableCopies: number; onLoanCopies: number; overdueLoans: number; dueToday: number; actionableHolds: number; recentActivity: { action: string; entityType: string; occurredAt: string; actorName: string | null }[] };
+type View = 'overview' | 'catalog' | 'members';
+
+function Workspace({ staff, token, signOut }: { staff: { displayName: string; role: string }; token: string; signOut: () => Promise<void> }) {
+  const [view, setView] = useState<View>('overview');
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [books, setBooks] = useState<Page<Book> | null>(null);
+  const [members, setMembers] = useState<Page<Member> | null>(null);
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showBookForm, setShowBookForm] = useState(false);
+  const [showMemberForm, setShowMemberForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function load() {
+    setLoading(true); setError(null);
+    try {
+      if (view === 'overview') setDashboard(await apiFetch<Dashboard>('/api/v1/dashboard/summary', {}, token));
+      if (view === 'catalog') setBooks(await apiFetch<Page<Book>>(`/api/v1/catalog/books?query=${encodeURIComponent(query)}&page=0&size=50`, {}, token));
+      if (view === 'members') setMembers(await apiFetch<Page<Member>>(`/api/v1/members?query=${encodeURIComponent(query)}&page=0&size=50`, {}, token));
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not load library records.'); }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { void load(); }, [view, query, token]);
+
+  async function save(path: string, body: unknown) {
+    setSaving(true); setError(null);
+    try { await apiFetch(path, { method: 'POST', body: JSON.stringify(body) }, token); setShowBookForm(false); setShowMemberForm(false); await load(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save this record.'); }
+    finally { setSaving(false); }
+  }
+
+  async function saveBook(body: { firstCopyBarcode?: string; [key: string]: unknown }) {
+    const { firstCopyBarcode, ...book } = body;
+    setSaving(true); setError(null);
+    try {
+      const created = await apiFetch<Book>('/api/v1/catalog/books', { method: 'POST', body: JSON.stringify(book) }, token);
+      if (firstCopyBarcode?.trim()) await apiFetch(`/api/v1/catalog/books/${created.id}/copies`,
+        { method: 'POST', body: JSON.stringify({ barcode: firstCopyBarcode.trim() }) }, token);
+      setShowBookForm(false); await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save this book title and first copy.'); }
+    finally { setSaving(false); }
+  }
+
+  const title = view === 'overview' ? 'Library overview' : view === 'catalog' ? 'Book catalogue' : 'Library members';
+  return <div className="workspace-shell">
+    <aside className="workspace-nav"><div className="auth-brand"><span className="auth-brand-mark"><LibraryBig size={21} /></span><span>libtrack<span className="brand-dot">.</span></span></div>
+      <p className="workspace-nav-label">LIBRARY</p>
+      {(['overview','catalog','members'] as View[]).map((item) => <button key={item} className={`workspace-nav-item ${view===item?'selected':''}`} onClick={() => {setView(item);setQuery('');}}>{item==='overview'?'Overview':item==='catalog'?'Catalog':'Members'}</button>)}
+      <div className="workspace-account"><div><strong>{staff.displayName}</strong><small>{staff.role}</small></div><button title="Sign out" aria-label="Sign out" onClick={() => void signOut()}><LogOut size={16}/></button></div>
+    </aside>
+    <main className="workspace-main"><header className="workspace-header"><div><span>LIBRARY WORKSPACE</span><h1>{title}</h1></div><div className="workspace-header-actions"><button className="workspace-refresh" onClick={() => void load()} disabled={loading}>Refresh</button>{view==='catalog'&&<button className="workspace-action" onClick={() => setShowBookForm(true)}>Add book</button>}{view==='members'&&<button className="workspace-action" onClick={() => setShowMemberForm(true)}>Add member</button>}</div></header>
+      {error&&<div className="workspace-error" role="alert">{error}</div>}
+      {loading?<div className="workspace-empty"><LoaderCircle className="spin"/> Loading library records…</div>:view==='overview'?<>
+        {!dashboard?<div className="workspace-empty">No dashboard data is available yet.</div>:<><section className="workspace-metrics">
+          <Stat label="Catalogue titles" value={dashboard.titles}/><Stat label="Active members" value={dashboard.activeMembers}/><Stat label="Available copies" value={dashboard.availableCopies}/><Stat label="On loan" value={dashboard.onLoanCopies}/><Stat label="Overdue" value={dashboard.overdueLoans}/><Stat label="Due today" value={dashboard.dueToday}/><Stat label="Open holds" value={dashboard.actionableHolds}/>
+        </section><section className="workspace-panel"><div className="workspace-panel-heading"><div><span>RECENT</span><h2>Library activity</h2></div></div>{dashboard.recentActivity.length===0?<p className="workspace-muted">No activity has been recorded yet.</p>:<div className="workspace-activity">{dashboard.recentActivity.map((event,index)=><div key={`${event.action}-${index}`}><strong>{event.action.replaceAll('_',' ').toLowerCase()}</strong><span>{event.entityType.toLowerCase()} · {event.actorName??'Staff account'} · {new Date(event.occurredAt).toLocaleString()}</span></div>)}</div>}</section></>}
+      </>:<section className="workspace-panel"><div className="workspace-list-toolbar"><label><span className="sr-only">Search</span><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder={view==='catalog'?'Search title or ISBN':'Search name, number, or email'} /></label><span>{view==='catalog'?books?.total??0:members?.total??0} records</span></div>
+        {view==='catalog'?(!books?.items.length?<p className="workspace-muted">No book titles yet. Add a book to start your catalogue.</p>:<div className="workspace-table-wrap"><table className="workspace-table"><thead><tr><th>TITLE</th><th>AUTHORS</th><th>ISBN</th><th>COPIES</th><th>AVAILABLE</th></tr></thead><tbody>{books.items.map(book=><tr key={book.id}><td><strong>{book.title}</strong><small>{book.publisher??''}</small></td><td>{book.authors||'—'}</td><td>{book.isbn||'—'}</td><td>{book.copies}</td><td>{book.availableCopies}</td></tr>)}</tbody></table></div>):(!members?.items.length?<p className="workspace-muted">No members yet. Add the first library member.</p>:<div className="workspace-table-wrap"><table className="workspace-table"><thead><tr><th>MEMBER</th><th>LIBRARY NO.</th><th>TYPE</th><th>EMAIL</th><th>STATUS</th></tr></thead><tbody>{members.items.map(member=><tr key={member.id}><td><strong>{member.firstName} {member.lastName}</strong><small>{member.phone??''}</small></td><td>{member.libraryNumber}</td><td>{member.memberType}</td><td>{member.email||'—'}</td><td>{member.status}</td></tr>)}</tbody></table></div>)}
+      </section>}
+    </main>
+    {showBookForm&&<BookForm busy={saving} close={()=>setShowBookForm(false)} save={(body)=>void saveBook(body)}/>}
+    {showMemberForm&&<MemberForm busy={saving} close={()=>setShowMemberForm(false)} save={(body)=>void save('/api/v1/members',body)}/>}
+  </div>;
 }
 
-function DueRow({ title, author, member, color }: { title: string; author: string; member: string; color: string }) {
-  return <div className="due-row"><div className={`book-cover ${color}`}><BookOpen size={15} /></div><div className="due-book"><strong>{title}</strong><small>{author}</small></div><div className="due-member"><small>WITH</small><strong>{member}</strong></div></div>;
-}
-
-export default App;
-
+function Stat({label,value}:{label:string;value:number}){return <article className="workspace-stat"><span>{label}</span><strong>{value.toLocaleString()}</strong></article>}
+function ModalFrame({title,children,close}:{title:string;children:React.ReactNode;close:()=>void}){return <div className="workspace-modal-scrim" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}><section className="workspace-modal"><header><h2>{title}</h2><button onClick={close} aria-label="Close">×</button></header>{children}</section></div>}
+function BookForm({busy,close,save}:{busy:boolean;close:()=>void;save:(body:{firstCopyBarcode:string;[key:string]:unknown})=>void}){const [form,setForm]=useState({title:'',isbn:'',publisher:'',publicationYear:'',description:'',authors:'',categories:'',barcode:''});return <ModalFrame title="Add a book title" close={close}><form className="workspace-form" onSubmit={e=>{e.preventDefault();save({firstCopyBarcode:form.barcode,...(({barcode,...book})=>book)(form),publicationYear:form.publicationYear?Number(form.publicationYear):null,authors:form.authors.split(',').map(s=>s.trim()).filter(Boolean),categories:form.categories.split(',').map(s=>s.trim()).filter(Boolean)});}}><label>Title<input required maxLength={500} value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></label><label>ISBN<input maxLength={20} value={form.isbn} onChange={e=>setForm({...form,isbn:e.target.value})}/></label><label>Publisher<input value={form.publisher} onChange={e=>setForm({...form,publisher:e.target.value})}/></label><label>Publication year<input type="number" min="1400" max="2200" value={form.publicationYear} onChange={e=>setForm({...form,publicationYear:e.target.value})}/></label><label>Authors <small>Separate names with commas</small><input value={form.authors} onChange={e=>setForm({...form,authors:e.target.value})}/></label><label>Categories <small>Separate names with commas</small><input value={form.categories} onChange={e=>setForm({...form,categories:e.target.value})}/></label><label>First copy barcode<input value={form.barcode} onChange={e=>setForm({...form,barcode:e.target.value})}/></label><label>Description<textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><button className="workspace-action" disabled={busy}>{busy?'Saving…':'Save book'}</button></form></ModalFrame>}
+function MemberForm({busy,close,save}:{busy:boolean;close:()=>void;save:(body:unknown)=>void}){const [form,setForm]=useState({libraryNumber:'',firstName:'',lastName:'',memberType:'STUDENT',email:'',phone:''});return <ModalFrame title="Add a library member" close={close}><form className="workspace-form" onSubmit={e=>{e.preventDefault();save(form);}}><label>Library number<input required maxLength={50} value={form.libraryNumber} onChange={e=>setForm({...form,libraryNumber:e.target.value})}/></label><label>First name<input required value={form.firstName} onChange={e=>setForm({...form,firstName:e.target.value})}/></label><label>Last name<input required value={form.lastName} onChange={e=>setForm({...form,lastName:e.target.value})}/></label><label>Member type<select value={form.memberType} onChange={e=>setForm({...form,memberType:e.target.value})}><option>STUDENT</option><option>STAFF</option><option>OTHER</option></select></label><label>Email<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>Phone<input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/></label><button className="workspace-action" disabled={busy}>{busy?'Saving…':'Save member'}</button></form></ModalFrame>}

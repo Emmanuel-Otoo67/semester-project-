@@ -2,15 +2,23 @@ spring:
   application:
     name: libtrack-api
   datasource:
-    url: ${SUPABASE_APP_DB_URL:${SUPABASE_DB_URL:${LIBTRACK_DB_URL:jdbc:postgresql://localhost:5433/libtrack}}}
-    username: ${SUPABASE_APP_DB_USER:${SUPABASE_DB_USER:${LIBTRACK_DB_USER:libtrack}}}
-    password: ${SUPABASE_APP_DB_PASSWORD:${SUPABASE_DB_PASSWORD:${LIBTRACK_DB_PASSWORD:libtrack_dev_password}}}
+    url: ${SUPABASE_APP_DB_URL:${LIBTRACK_DB_URL:jdbc:postgresql://localhost:5433/libtrack}}
+    username: ${SUPABASE_APP_DB_USER:${LIBTRACK_DB_USER:libtrack}}
+    password: ${SUPABASE_APP_DB_PASSWORD:${LIBTRACK_DB_PASSWORD:libtrack_dev_password}}
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:5}
       connection-timeout: 10000
   flyway:
-    enabled: true
+    enabled: ${FLYWAY_ENABLED:true}
     locations: classpath:db/migration
+    url: ${SUPABASE_FLYWAY_DB_URL:${SUPABASE_APP_DB_URL:${LIBTRACK_DB_URL:jdbc:postgresql://localhost:5433/libtrack}}}
+    user: ${SUPABASE_FLYWAY_DB_USER:${LIBTRACK_DB_USER:libtrack}}
+    password: ${SUPABASE_FLYWAY_DB_PASSWORD:${LIBTRACK_DB_PASSWORD:libtrack_dev_password}}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SUPABASE_AUTH_ISSUER_URI:http://localhost:9999/auth/v1}
   jackson:
     default-property-inclusion: non_null
 server:
@@ -27,9 +35,14 @@ management:
       probes:
         enabled: true
 libtrack:
-  security:
-    username: ${LIBTRACK_ADMIN_USERNAME}
-    password: ${LIBTRACK_ADMIN_PASSWORD}
+  library:
+    timezone: ${LIBTRACK_LIBRARY_TIMEZONE:Africa/Accra}
   cors:
-    allowed-origin: ${LIBTRACK_CORS_ORIGIN:http://localhost:5173}
+    allowed-origins: ${LIBTRACK_CORS_ORIGINS:http://localhost:5173}
+supabase:
+  auth:
+    issuer-uri: ${SUPABASE_AUTH_ISSUER_URI:http://localhost:9999/auth/v1}
+    audience: ${SUPABASE_AUTH_AUDIENCE:authenticated}
+    jwt-mode: ${SUPABASE_AUTH_JWT_MODE:JWKS}
+    publishable-key: ${SUPABASE_AUTH_PUBLISHABLE_KEY:}
 
