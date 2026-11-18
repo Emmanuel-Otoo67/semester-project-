@@ -48,7 +48,7 @@ public class LegacySupabaseJwtDecoder implements JwtDecoder {
             if (claims.get("iat") instanceof Number issued && Instant.ofEpochSecond(issued.longValue()).isAfter(Instant.now().plusSeconds(30)))
                 throw new BadJwtException("Access token issue time is invalid.");
 
-            Map<?, ?> authUser = authClient.get().uri("/user")
+            Map<?, ?> authUser = authClient.get().uri("user")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .header("apikey", publishableKey)
                     .retrieve().body(Map.class);

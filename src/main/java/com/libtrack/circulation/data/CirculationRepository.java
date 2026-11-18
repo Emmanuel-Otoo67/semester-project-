@@ -17,6 +17,8 @@ import java.util.UUID;
     public record Hold(UUID id,UUID memberId,UUID bookId,String status,UUID copyId,OffsetDateTime readyUntil){}
 
     public Optional<Copy> lockCopy(String barcode){return jdbc.query("select id,book_id,barcode,status from book_copies where barcode=? for update",rs->rs.next()?Optional.of(new Copy(rs.getObject("id",UUID.class),rs.getObject("book_id",UUID.class),rs.getString("barcode"),rs.getString("status"))):Optional.empty(),barcode.trim());}
+    public Optional<UUID> bookIdForBarcode(String barcode){return jdbc.query("select book_id from book_copies where barcode=?",rs->rs.next()?Optional.of(rs.getObject(1,UUID.class)):Optional.empty(),barcode.trim());}
+    public boolean lockBook(UUID id){return Boolean.TRUE.equals(jdbc.query("select id from books where id=? for update",(org.springframework.jdbc.core.ResultSetExtractor<Boolean>)rs->rs.next(),id));}
     public Optional<Member> lockMember(UUID id){return jdbc.query("select id,status from members where id=? for update",rs->rs.next()?Optional.of(new Member(rs.getObject("id",UUID.class),rs.getString("status"))):Optional.empty(),id);}
     public int activeLoanCount(UUID memberId){return jdbc.queryForObject("select count(*) from loans where member_id=? and returned_at is null",Integer.class,memberId);}
     public int settingInt(String key,String field,int fallback){Integer value=jdbc.query("select (setting_value->>?)::integer from library_settings where setting_key=?",rs->rs.next()?rs.getObject(1,Integer.class):null,field,key);return value==null?fallback:value;}
@@ -36,12 +38,24 @@ import java.util.UUID;
     public boolean hasOpenHold(UUID bookId,UUID memberId){return Boolean.TRUE.equals(jdbc.queryForObject("select exists(select 1 from holds where book_id=? and member_id=? and status in ('QUEUED','READY'))",Boolean.class,bookId,memberId));}
     public void renew(UUID loanId,int days){jdbc.update("update loans set due_at=due_at+make_interval(days=>?),renewal_count=renewal_count+1 where id=? and returned_at is null",days,loanId);}
     public void returnLoan(UUID loanId,UUID copyId){jdbc.update("update loans set returned_at=now() where id=? and returned_at is null",loanId);jdbc.update("update book_copies set status='AVAILABLE',updated_at=now() where id=?",copyId);}
-    public Optional<UUID> claimNextHold(UUID bookId,UUID copyId,int days){return jdbc.query("select id from holds where book_id=? and status='QUEUED' order by requested_at,id limit 1 for update skip locked",rs->rs.next()?Optional.of(rs.getObject("id",UUID.class)):Optional.empty(),bookId).map(id->{jdbc.update("update holds set status='READY',fulfilled_copy_id=?,ready_until=now()+make_interval(days=>?) where id=?",copyId,days,id);jdbc.update("update book_copies set status='ON_HOLD',updated_at=now() where id=?",copyId);return id;});}
-    public UUID createHold(UUID memberId,UUID bookId){return jdbc.queryForObject("insert into holds(member_id,book_id) values (?,?) returning id",UUID.class,memberId,bookId);}
+    public Optional<UUID> claimNextHold(UUID bookId,UUID copyId,int days){
+        Optional<UUID> next=jdbc.query("select id from holds where book_id=? and status='QUEUED' order by requested_at,id limit 1 for update skip locked",
+                (org.springframework.jdbc.core.ResultSetExtractor<Optional<UUID>>) rs -> rs.next()?Optional.of(rs.getObject("id",UUID.class)):Optional.empty(),bookId);
+        next.ifPresent(id->{jdbc.update("update holds set status='READY',fulfilled_copy_id=?,ready_until=now()+make_interval(days=>?) where id=?",copyId,days,id);jdbc.update("update book_copies set status='ON_HOLD',updated_at=now() where id=?",copyId);});
+        return next;
+    }
+    public UUID createHold(UUID memberId,UUID bookId,int pickupDays){
+        Optional<Copy> available=hasQueuedHold(bookId)?Optional.empty():jdbc.query("select id,book_id,barcode,status from book_copies where book_id=? and status='AVAILABLE' order by barcode limit 1 for update skip locked",rs->rs.next()?Optional.of(new Copy(rs.getObject("id",UUID.class),rs.getObject("book_id",UUID.class),rs.getString("barcode"),rs.getString("status"))):Optional.empty(),bookId);
+        if(available.isEmpty())return jdbc.queryForObject("insert into holds(member_id,book_id,status) values (?,?,'QUEUED') returning id",UUID.class,memberId,bookId);
+        Copy copy=available.get();UUID id=jdbc.queryForObject("insert into holds(member_id,book_id,status,fulfilled_copy_id,ready_until) values (?,?,'READY',?,now()+make_interval(days=>?)) returning id",UUID.class,memberId,bookId,copy.id(),pickupDays);
+        jdbc.update("update book_copies set status='ON_HOLD',updated_at=now() where id=?",copy.id());return id;
+    }
     public Optional<Hold> lockHold(UUID id){return jdbc.query("select id,member_id,book_id,status,fulfilled_copy_id,ready_until from holds where id=? for update",rs->rs.next()?Optional.of(new Hold(rs.getObject("id",UUID.class),rs.getObject("member_id",UUID.class),rs.getObject("book_id",UUID.class),rs.getString("status"),rs.getObject("fulfilled_copy_id",UUID.class),rs.getObject("ready_until",OffsetDateTime.class))):Optional.empty(),id);}
     public Optional<Copy> lockCopy(UUID id){return jdbc.query("select id,book_id,barcode,status from book_copies where id=? for update",rs->rs.next()?Optional.of(new Copy(rs.getObject("id",UUID.class),rs.getObject("book_id",UUID.class),rs.getString("barcode"),rs.getString("status"))):Optional.empty(),id);}
     public void cancelHold(Hold hold){jdbc.update("update holds set status='CANCELLED' where id=?",hold.id());if("READY".equals(hold.status())&&hold.copyId()!=null)jdbc.update("update book_copies set status='AVAILABLE',updated_at=now() where id=? and status='ON_HOLD'",hold.copyId());}
     public void fulfillHold(UUID holdId){jdbc.update("update holds set status='FULFILLED',fulfilled_at=now() where id=? and status='READY'",holdId);}
+    public List<Hold> expiredReadyHoldCandidates(){return jdbc.query("select id,member_id,book_id,status,fulfilled_copy_id,ready_until from holds where status='READY' and ready_until<=now() order by ready_until,id",(rs,n)->new Hold(rs.getObject("id",UUID.class),rs.getObject("member_id",UUID.class),rs.getObject("book_id",UUID.class),rs.getString("status"),rs.getObject("fulfilled_copy_id",UUID.class),rs.getObject("ready_until",OffsetDateTime.class)));}
+    public boolean expireHold(Hold hold){int changed=jdbc.update("update holds set status='EXPIRED' where id=? and status='READY' and ready_until<=now()",hold.id());if(changed==0)return false;if(hold.copyId()!=null)jdbc.update("update book_copies set status='AVAILABLE',updated_at=now() where id=? and status='ON_HOLD'",hold.copyId());return true;}
     public List<Map<String,Object>> loans(boolean current,UUID memberId,String barcode,boolean overdue){return jdbc.queryForList("""
       select l.id,l.member_id as \"memberId\",m.library_number as \"libraryNumber\",concat(m.first_name,' ',m.last_name) as \"memberName\",
         l.copy_id as \"copyId\",c.barcode,b.title,l.checked_out_at as \"checkedOutAt\",l.due_at as \"dueAt\",l.returned_at as \"returnedAt\",l.renewal_count as \"renewalCount\"

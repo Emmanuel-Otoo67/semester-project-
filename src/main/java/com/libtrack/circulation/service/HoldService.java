@@ -17,13 +17,15 @@ import java.util.UUID;
     @Transactional public UUID create(UUID memberId,UUID bookId,UUID actor){
         var member=repository.lockMember(memberId).orElseThrow(()->new CirculationConflictException("Member not found."));
         if(!"ACTIVE".equals(member.status()))throw new CirculationConflictException("This member account is not active.");
-        if(!repository.bookExists(bookId))throw new CirculationConflictException("Book title not found.");
+        if(!repository.lockBook(bookId))throw new CirculationConflictException("Book title not found.");
         if(repository.hasOpenHold(bookId,memberId))throw new CirculationConflictException("This member already has an open hold for the title.");
-        UUID id=repository.createHold(memberId,bookId);audit.record(actor,"HOLD_CREATED","HOLD",id);return id;
+        int pickupDays=repository.settingInt("circulation","holdPickupDays",3);
+        UUID id=repository.createHold(memberId,bookId,pickupDays);audit.record(actor,"HOLD_CREATED","HOLD",id);return id;
     }
     @Transactional public void cancel(UUID id,UUID actor){
         var hold=repository.lockHold(id).orElseThrow(()->new CirculationConflictException("Hold not found."));
         if(!List.of("QUEUED","READY").contains(hold.status()))throw new CirculationConflictException("Only queued or ready holds can be cancelled.");
+        repository.lockBook(hold.bookId());
         repository.cancelHold(hold);audit.record(actor,"HOLD_CANCELLED","HOLD",id);
         if("READY".equals(hold.status())&&hold.copyId()!=null){int days=repository.settingInt("circulation","holdPickupDays",3);repository.claimNextHold(hold.bookId(),hold.copyId(),days).ifPresent(next->audit.record(actor,"HOLD_READY","HOLD",next));}
     }
@@ -33,6 +35,7 @@ import java.util.UUID;
         if(hold.readyUntil()==null||hold.readyUntil().isBefore(OffsetDateTime.now()))throw new CirculationConflictException("The pickup window has expired.");
         var member=repository.lockMember(hold.memberId()).orElseThrow(()->new CirculationConflictException("Member not found."));
         if(!"ACTIVE".equals(member.status()))throw new CirculationConflictException("This member account is not active.");
+        repository.lockBook(hold.bookId());
         var copy=repository.lockCopy(hold.copyId()).orElseThrow(()->new CirculationConflictException("The reserved copy is no longer available."));
         if(!"ON_HOLD".equals(copy.status()))throw new CirculationConflictException("The reserved copy is no longer on hold.");
         if(repository.activeLoanCount(member.id())>=repository.settingInt("circulation","maxLoansPerMember",5))throw new CirculationConflictException("This member has reached the active-loan limit.");

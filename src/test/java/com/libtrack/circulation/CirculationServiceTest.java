@@ -18,6 +18,8 @@ class CirculationServiceTest {
 
     @Test void checkoutRequiresAnActiveMemberAndAvailableCopy(){
         when(repository.lockMember(member)).thenReturn(Optional.of(new CirculationRepository.Member(member,"ACTIVE")));
+        when(repository.bookIdForBarcode("B-100")).thenReturn(Optional.of(book));
+        when(repository.lockBook(book)).thenReturn(true);
         when(repository.lockCopy("B-100")).thenReturn(Optional.of(new CirculationRepository.Copy(copyId,book,"B-100","ON_LOAN")));
         var error=assertThrows(CirculationConflictException.class,()->service.checkout(member,"B-100",actor));
         assertEquals("This copy is not available for checkout.",error.getMessage());
@@ -35,6 +37,8 @@ class CirculationServiceTest {
         var copy=new CirculationRepository.Copy(copyId,book,"B-100","AVAILABLE");
         var loan=new CirculationRepository.Loan(UUID.randomUUID(),copyId,book,member,actor,"ACTIVE",null,(short)0);
         when(repository.lockMember(member)).thenReturn(Optional.of(new CirculationRepository.Member(member,"ACTIVE")));
+        when(repository.bookIdForBarcode("B-100")).thenReturn(Optional.of(book));
+        when(repository.lockBook(book)).thenReturn(true);
         when(repository.lockCopy("B-100")).thenReturn(Optional.of(copy));
         when(repository.settingInt("circulation","maxLoansPerMember",5)).thenReturn(5);
         when(repository.activeLoanCount(member)).thenReturn(0);
@@ -46,8 +50,11 @@ class CirculationServiceTest {
 
     @Test void renewalIsBlockedWhenAStudentIsWaitingForTheTitle(){
         UUID loanId=UUID.randomUUID();
-        when(repository.lockLoan(loanId)).thenReturn(Optional.of(new CirculationRepository.Loan(loanId,copyId,book,member,actor,"ACTIVE",null,(short)0)));
+        var loan=new CirculationRepository.Loan(loanId,copyId,book,member,actor,"ACTIVE",null,(short)0);
+        when(repository.findLoan(loanId)).thenReturn(Optional.of(loan));
         when(repository.lockMember(member)).thenReturn(Optional.of(new CirculationRepository.Member(member,"ACTIVE")));
+        when(repository.lockBook(book)).thenReturn(true);
+        when(repository.lockLoan(loanId)).thenReturn(Optional.of(loan));
         when(repository.settingInt("circulation","maxRenewals",1)).thenReturn(1);
         when(repository.hasQueuedHold(book)).thenReturn(true);
         assertThrows(CirculationConflictException.class,()->service.renew(loanId,actor));

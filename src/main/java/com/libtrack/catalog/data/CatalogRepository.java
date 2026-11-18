@@ -19,7 +19,7 @@ public class CatalogRepository {
         String filter = "%" + query.trim() + "%";
         Long total = jdbc.queryForObject("select count(*) from books b where b.title ilike ? or coalesce(b.isbn,'') ilike ?", Long.class, filter, filter);
         List<BookSummary> items = jdbc.query("""
-                select b.id,b.title,b.isbn,b.publisher,b.publication_year,
+                select b.id,b.title,b.isbn,b.publisher,b.publication_year,b.description,
                   coalesce((select string_agg(distinct a.name, ', ' order by a.name) from book_authors ba join authors a on a.id=ba.author_id where ba.book_id=b.id),'') authors,
                   coalesce((select string_agg(distinct c.name, ', ' order by c.name) from book_categories bc join categories c on c.id=bc.category_id where bc.book_id=b.id),'') categories,
                   (select count(*) from book_copies cp where cp.book_id=b.id) copies,
@@ -27,7 +27,7 @@ public class CatalogRepository {
                 from books b where b.title ilike ? or coalesce(b.isbn,'') ilike ?
                 order by b.title limit ? offset ?
                 """, (rs, row) -> new BookSummary(rs.getObject("id", UUID.class), rs.getString("title"),
-                rs.getString("isbn"), rs.getString("publisher"), (Integer) rs.getObject("publication_year"),
+                rs.getString("isbn"), rs.getString("publisher"), (Integer) rs.getObject("publication_year"), rs.getString("description"),
                 rs.getString("authors"), rs.getString("categories"), rs.getLong("copies"), rs.getLong("available_copies")),
                 filter, filter, size, (long) page * size);
         return new PageResult<>(items, page, size, total == null ? 0 : total);
@@ -35,14 +35,14 @@ public class CatalogRepository {
 
     public BookSummary get(UUID id) {
         return jdbc.query("""
-                select b.id,b.title,b.isbn,b.publisher,b.publication_year,
+                select b.id,b.title,b.isbn,b.publisher,b.publication_year,b.description,
                   coalesce((select string_agg(distinct a.name, ', ' order by a.name) from book_authors ba join authors a on a.id=ba.author_id where ba.book_id=b.id),'') authors,
                   coalesce((select string_agg(distinct c.name, ', ' order by c.name) from book_categories bc join categories c on c.id=bc.category_id where bc.book_id=b.id),'') categories,
                   (select count(*) from book_copies cp where cp.book_id=b.id) copies,
                   (select count(*) from book_copies cp where cp.book_id=b.id and cp.status='AVAILABLE') available_copies
                 from books b where b.id=?
                 """, rs -> rs.next() ? new BookSummary(rs.getObject("id", UUID.class), rs.getString("title"),
-                rs.getString("isbn"), rs.getString("publisher"), (Integer) rs.getObject("publication_year"),
+                rs.getString("isbn"), rs.getString("publisher"), (Integer) rs.getObject("publication_year"), rs.getString("description"),
                 rs.getString("authors"), rs.getString("categories"), rs.getLong("copies"), rs.getLong("available_copies"))
                 : null, id);
     }

@@ -10,7 +10,13 @@ SET auth_user_id = auth_user.id
 FROM auth.users AS auth_user
 WHERE staff.auth_user_id IS NULL
   AND auth_user.email IS NOT NULL
-  AND lower(btrim(staff.login_identifier)) = lower(btrim(auth_user.email));
+  AND lower(btrim(staff.login_identifier)) = lower(btrim(auth_user.email))
+  -- Leave ambiguous legacy matches for a human to link explicitly.
+  AND NOT EXISTS (
+      SELECT 1 FROM public.staff_users AS another_staff
+      WHERE another_staff.id <> staff.id
+        AND lower(btrim(another_staff.login_identifier)) = lower(btrim(auth_user.email))
+  );
 
 ALTER TABLE public.staff_users
     ADD CONSTRAINT fk_staff_users_auth_user

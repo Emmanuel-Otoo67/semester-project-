@@ -16,7 +16,10 @@ import java.util.UUID;
     @Transactional public CirculationRepository.Loan checkout(UUID memberId,String barcode,UUID actor){
         var member=repository.lockMember(memberId).orElseThrow(()->new CirculationConflictException("Member not found."));
         if(!"ACTIVE".equals(member.status()))throw new CirculationConflictException("This member account is not active.");
+        var bookId=repository.bookIdForBarcode(barcode).orElseThrow(()->new CirculationConflictException("No book copy matches that barcode."));
+        if(!repository.lockBook(bookId))throw new CirculationConflictException("Book title not found.");
         var copy=repository.lockCopy(barcode).orElseThrow(()->new CirculationConflictException("No book copy matches that barcode."));
+        if(repository.hasQueuedHold(copy.bookId()))throw new CirculationConflictException("This copy is reserved for members already waiting for the title.");
         if(!"AVAILABLE".equals(copy.status()))throw new CirculationConflictException("This copy is not available for checkout.");
         int maxLoans=repository.settingInt("circulation","maxLoansPerMember",5);
         if(repository.activeLoanCount(memberId)>=maxLoans)throw new CirculationConflictException("This member has reached the active-loan limit.");
@@ -24,9 +27,11 @@ import java.util.UUID;
         var loan=repository.createLoan(copy,memberId,actor,days);audit.record(actor,"LOAN_CHECKED_OUT","LOAN",loan.id());return loan;
     }
     @Transactional public CirculationRepository.Loan renew(UUID loanId,UUID actor){
+        var reference=repository.findLoan(loanId).orElseThrow(()->new CirculationConflictException("Loan not found."));
+        var member=repository.lockMember(reference.memberId()).orElseThrow(()->new CirculationConflictException("Member not found."));
+        if(!repository.lockBook(reference.bookId()))throw new CirculationConflictException("Book title not found.");
         var loan=repository.lockLoan(loanId).orElseThrow(()->new CirculationConflictException("Loan not found."));
         if(!"ACTIVE".equals(loan.status()))throw new CirculationConflictException("This loan has already been returned.");
-        var member=repository.lockMember(loan.memberId()).orElseThrow(()->new CirculationConflictException("Member not found."));
         if(!"ACTIVE".equals(member.status()))throw new CirculationConflictException("This member account is not active.");
         int max=repository.settingInt("circulation","maxRenewals",1);
         if(loan.renewalCount()>=max)throw new CirculationConflictException("The renewal limit has been reached.");
@@ -35,6 +40,8 @@ import java.util.UUID;
         audit.record(actor,"LOAN_RENEWED","LOAN",loanId);return repository.findLoan(loanId).orElseThrow();
     }
     @Transactional public void returnLoan(UUID loanId,UUID actor){
+        var reference=repository.findLoan(loanId).orElseThrow(()->new CirculationConflictException("Loan not found."));
+        if(!repository.lockBook(reference.bookId()))throw new CirculationConflictException("Book title not found.");
         var loan=repository.lockLoan(loanId).orElseThrow(()->new CirculationConflictException("Loan not found."));
         if(!"ACTIVE".equals(loan.status()))throw new CirculationConflictException("This loan has already been returned.");
         repository.returnLoan(loan.id(),loan.copyId());audit.record(actor,"LOAN_RETURNED","LOAN",loan.id());
@@ -42,4 +49,15 @@ import java.util.UUID;
         repository.claimNextHold(loan.bookId(),loan.copyId(),pickupDays).ifPresent(holdId->audit.record(actor,"HOLD_READY","HOLD",holdId));
     }
     public List<Map<String,Object>> list(boolean current,UUID memberId,String barcode,boolean overdue){return repository.loans(current,memberId,barcode,overdue);}
+    @Transactional public void releaseExpiredReadyHolds(){
+        int pickupDays=repository.settingInt("circulation","holdPickupDays",3);
+        for(var candidate:repository.expiredReadyHoldCandidates()){
+            if(!repository.lockBook(candidate.bookId()))continue;
+            var locked=repository.lockHold(candidate.id()).orElse(null);
+            if(locked==null||!repository.expireHold(locked))continue;
+            audit.record(null,"HOLD_EXPIRED","HOLD",locked.id());
+            if(locked.copyId()!=null)repository.claimNextHold(locked.bookId(),locked.copyId(),pickupDays)
+                    .ifPresent(next->audit.record(null,"HOLD_READY","HOLD",next));
+        }
+    }
 }
