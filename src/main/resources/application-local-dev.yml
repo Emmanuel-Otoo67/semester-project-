@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: ${LIBTRACK_DB_URL:jdbc:postgresql://127.0.0.1:5433/libtrack}
+    username: ${LIBTRACK_DB_USER:libtrack}
+    password: ${LIBTRACK_DB_PASSWORD:libtrack_dev_password}
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+    url: ${LIBTRACK_DB_URL:jdbc:postgresql://127.0.0.1:5433/libtrack}
+    user: ${LIBTRACK_DB_USER:libtrack}
+    password: ${LIBTRACK_DB_PASSWORD:libtrack_dev_password}
+server:
+  address: 127.0.0.1
