@@ -17,10 +17,6 @@ spring:
     user: ${SUPABASE_FLYWAY_DB_USER:${LIBTRACK_DB_USER:libtrack}}
     password: ${SUPABASE_FLYWAY_DB_PASSWORD:${LIBTRACK_DB_PASSWORD:libtrack_dev_password}}
   security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${SUPABASE_AUTH_ISSUER_URI:http://localhost:9999/auth/v1}
   jackson:
     default-property-inclusion: non_null
 server:

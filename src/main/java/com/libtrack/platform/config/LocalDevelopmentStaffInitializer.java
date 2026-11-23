@@ -5,6 +5,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import com.libtrack.platform.auth.StaffIdentityRepository;
 
 import java.util.UUID;
 
@@ -12,7 +13,7 @@ import java.util.UUID;
 @Profile("local-dev")
 public class LocalDevelopmentStaffInitializer implements ApplicationRunner {
     public static final UUID LOCAL_ADMIN_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
-    public static final String LOCAL_ADMIN_LOGIN = "local-admin@libtrack.local";
+    public static final String LOCAL_ADMIN_LOGIN = StaffIdentityRepository.LOCAL_DEVELOPMENT_LOGIN;
     public static final String LOCAL_ADMIN_DISPLAY_NAME = "Local Development Admin";
 
     private static final String UPSERT_LOCAL_ADMIN = """

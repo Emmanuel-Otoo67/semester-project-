@@ -8,6 +8,8 @@ import java.util.UUID;
 
 @Repository
 public class StaffIdentityRepository {
+    public static final String LOCAL_DEVELOPMENT_LOGIN = "local-admin@libtrack.local";
+
     private final JdbcTemplate jdbc;
 
     public StaffIdentityRepository(JdbcTemplate jdbc) {
@@ -24,5 +26,17 @@ public class StaffIdentityRepository {
                         result.getObject("auth_user_id", UUID.class), result.getString("display_name"),
                         StaffRole.valueOf(result.getString("role"))))
                 : Optional.empty(), authUserId);
+    }
+
+    public Optional<CurrentStaff> findLocalDevelopmentAdmin() {
+        return jdbc.query("""
+                select id, auth_user_id, display_name, role
+                from staff_users
+                where login_identifier = ? and active = true
+                """, result -> result.next()
+                ? Optional.of(new CurrentStaff(result.getObject("id", UUID.class),
+                        result.getObject("auth_user_id", UUID.class), result.getString("display_name"),
+                        StaffRole.valueOf(result.getString("role"))))
+                : Optional.empty(), LOCAL_DEVELOPMENT_LOGIN);
     }
 }

@@ -2,6 +2,7 @@ package com.libtrack.platform.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.authorization.AuthorizationDecision;
@@ -26,6 +27,18 @@ import java.nio.charset.StandardCharsets;
 @EnableConfigurationProperties(CorsSettings.class)
 public class SecurityConfig {
     @Bean
+    @Profile("local-dev")
+    SecurityFilterChain localDevelopmentSecurityFilterChain(HttpSecurity http) throws Exception {
+        return http
+                .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .build();
+    }
+
+    @Bean
+    @Profile("!local-dev")
     SecurityFilterChain securityFilterChain(HttpSecurity http, StaffIdentityService staffIdentityService) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
