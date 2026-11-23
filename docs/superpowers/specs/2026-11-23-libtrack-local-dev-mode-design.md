@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** Conversational design approved; written spec awaiting review.
+**Status:** Approved by user on 2026-11-23.
 
 ## Context
 
@@ -68,3 +68,4 @@ The local database receives one deterministic, active `ADMIN` staff row with no 
 ## Open implementation details
 
 The implementation plan should choose the smallest integration point for resolving a local staff identity across existing controllers, ensure the seed is idempotent on existing local volumes, and add focused tests for local-mode isolation and unchanged production security.
+
