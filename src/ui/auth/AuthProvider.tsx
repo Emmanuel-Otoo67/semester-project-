@@ -1,15 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { apiFetch } from '../api/http';
-import { supabase, supabaseConfigured } from './supabase';
+import { ApiError, apiFetch } from '../api/http';
+import { localDevelopmentMode, supabase, supabaseConfigured } from './supabase';
 
-export type StaffSession = { authenticated: true; staffId: string; displayName: string; role: 'ADMIN' | 'LIBRARIAN' };
+export type StaffSession = { authenticated: true; localDevelopment?: boolean; staffId: string; displayName: string; role: 'ADMIN' | 'LIBRARIAN' };
 type AuthState = {
   loading: boolean;
   session: Session | null;
   staff: StaffSession | null;
   error: string | null;
   configurationError: boolean;
+  localDevelopment: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -24,6 +25,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const resolveStaff = useCallback(async (current: Session | null) => {
+    if (localDevelopmentMode) {
+      try {
+        const identity = await apiFetch<StaffSession>('/api/v1/session');
+        if (!identity.localDevelopment) {
+          throw new Error('The API is not running with the Spring local-dev profile. Start it with SPRING_PROFILES_ACTIVE=local-dev.');
+        }
+        setStaff(identity);
+        setError(null);
+      } catch (cause) {
+        setStaff(null);
+        setError(cause instanceof ApiError && (cause.status === 401 || cause.status === 403)
+          ? 'The API is not running with the Spring local-dev profile. Start it with SPRING_PROFILES_ACTIVE=local-dev.'
+          : cause instanceof Error ? cause.message : 'Could not connect to the local LibTrack API.');
+      }
+      return;
+    }
     if (!current) { setStaff(null); setError(null); return; }
     try {
       const identity = await apiFetch<StaffSession>('/api/v1/session', {}, current.access_token);
@@ -36,6 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
+    if (localDevelopmentMode) {
+      setLoading(true);
+      await resolveStaff(null);
+      setLoading(false);
+      return;
+    }
     if (!supabase) { setLoading(false); return; }
     setLoading(true);
     const { data, error: sessionError } = await supabase.auth.getSession();
@@ -46,6 +69,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [resolveStaff]);
 
   useEffect(() => {
+    if (localDevelopmentMode) {
+      let alive = true;
+      void resolveStaff(null).finally(() => { if (alive) setLoading(false); });
+      return () => { alive = false; };
+    }
     if (!supabase) { setLoading(false); return; }
     let alive = true;
     void supabase.auth.getSession().then(async ({ data, error: sessionError }) => {
@@ -66,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [resolveStaff]);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    if (localDevelopmentMode) throw new Error('Sign-in is disabled in local development mode.');
     if (!supabase) throw new Error('Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to enable sign-in.');
     setError(null);
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
@@ -75,11 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [resolveStaff]);
 
   const signOut = useCallback(async () => {
-    if (supabase) await supabase.auth.signOut();
+    if (!localDevelopmentMode && supabase) await supabase.auth.signOut();
     setSession(null); setStaff(null); setError(null);
   }, []);
 
-  const value = useMemo(() => ({ loading, session, staff, error, configurationError: !supabaseConfigured, signIn, signOut, refresh }),
+  const value = useMemo(() => ({ loading, session, staff, error,
+    configurationError: !localDevelopmentMode && !supabaseConfigured,
+    localDevelopment: localDevelopmentMode, signIn, signOut, refresh }),
     [loading, session, staff, error, signIn, signOut, refresh]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
