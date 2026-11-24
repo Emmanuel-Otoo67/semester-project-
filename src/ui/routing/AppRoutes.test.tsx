@@ -69,6 +69,14 @@ describe('LibTrack route shell', () => {
     expect(await screen.findByRole('heading', { name: 'Sign in to your library' })).toBeTruthy();
   });
 
+  it('shows the local demo sign-in screen without preloading the dashboard session', async () => {
+    await renderAt('/sign-in', true);
+
+    expect(await screen.findByRole('heading', { name: 'Sign in to your library' })).toBeTruthy();
+    expect(screen.getByText(/local demo/i)).toBeTruthy();
+    expect(requests.some(url => url.endsWith('/api/v1/session'))).toBe(false);
+  });
+
   it('renders the forgot-password route directly', async () => {
     await renderAt('/forgot-password', false);
 

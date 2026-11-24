@@ -1,52 +1,21 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { ArrowRight, LibraryBig, LoaderCircle } from 'lucide-react';
 import { AuthProvider, useAuth } from '../auth/AuthProvider';
+import AccountPage from '../pages/AccountPage';
 import HomePage from '../pages/HomePage';
 import { Workspace } from '../workspace/Workspace';
 
-function RoutePlaceholder({ title }: { title: string }) {
-  return <main className="auth-shell"><section className="auth-card"><h1>{title}</h1></section></main>;
-}
+const localDemoMode = import.meta.env.VITE_LIBTRACK_LOCAL_DEV === 'true';
 
 function SignInRoute() {
-  const { loading, session, staff, error, configurationError, localDevelopment, signIn, signOut, refresh } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-    setFormError(null);
-    try {
-      await signIn(email, password);
-      setPassword('');
-    } catch (cause) {
-      setFormError(cause instanceof Error ? cause.message : 'Sign-in failed. Try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
+  const { loading, session, staff, error, configurationError, signIn, refresh, signOut } = useAuth();
   if (loading) return <main className="auth-shell"><div className="auth-card auth-loading"><LoaderCircle className="spin" /><span>Checking your LibTrack session…</span></div></main>;
-  if (staff && (session || localDevelopment)) return <Navigate to="/dashboard" replace />;
-
-  return <main className="auth-shell"><section className="auth-card">
-    <div className="auth-brand"><span className="auth-brand-mark"><LibraryBig size={22} /></span><span>libtrack<span className="brand-dot">.</span></span></div>
-    <p className="auth-kicker">STAFF ACCESS</p><h1>Sign in to your library</h1>
-    <p className="auth-copy">Use the Supabase Auth account linked to your LibTrack staff profile.</p>
-    {configurationError && <div className="auth-alert" role="alert"><strong>Sign-in is not configured.</strong><span>Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY for this environment.</span></div>}
-    {error && <div className="auth-alert" role="alert"><strong>Staff access needs attention.</strong><span>{error}</span>{session && <><button type="button" onClick={() => void refresh()}>Check again</button><button type="button" onClick={() => void signOut()}>Sign out and use another account</button></>}</div>}
-    <form className="auth-form" onSubmit={submit}>
-      <label htmlFor="staff-email">Email address</label><input id="staff-email" type="email" autoComplete="username" value={email} onChange={event => setEmail(event.target.value)} placeholder="name@school.edu" required />
-      <label htmlFor="staff-password">Password</label><input id="staff-password" type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required />
-      {formError && <p className="auth-form-error" role="alert">{formError}</p>}
-      <button className="auth-primary" type="submit" disabled={submitting || configurationError}>{submitting ? <><LoaderCircle size={17} className="spin" /> Signing in…</> : <>Continue <ArrowRight size={17} /></>}</button>
-    </form>
-    <p className="auth-footnote">Access is managed by your library administrator.</p>
-  </section></main>;
+  if (staff && session) return <Navigate to="/dashboard" replace />;
+  const authError = configurationError
+    ? 'Sign-in is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY for this environment.'
+    : error;
+  return <AccountPage mode="sign-in" localDemo={false} onSignIn={signIn} authError={authError} signInDisabled={configurationError} sessionPresent={Boolean(session)} onRetry={refresh} onSignOut={signOut} />;
 }
 
 function DashboardRoute() {
@@ -71,12 +40,16 @@ function WithAuth({ children }: { children: ReactNode }) {
 }
 
 export default function AppRoutes() {
+  const signInPage = localDemoMode
+    ? <AccountPage mode="sign-in" localDemo />
+    : <WithAuth><SignInRoute /></WithAuth>;
+
   return <Routes>
     <Route path="/" element={<HomePage />} />
-    <Route path="/sign-in" element={<WithAuth><SignInRoute /></WithAuth>} />
-    <Route path="/create-account" element={<RoutePlaceholder title="Create account" />} />
-    <Route path="/forgot-password" element={<RoutePlaceholder title="Forgot password" />} />
-    <Route path="/reset-password" element={<RoutePlaceholder title="Reset password" />} />
+    <Route path="/sign-in" element={signInPage} />
+    <Route path="/create-account" element={<AccountPage mode="create-account" localDemo={localDemoMode} />} />
+    <Route path="/forgot-password" element={<AccountPage mode="forgot-password" localDemo={localDemoMode} />} />
+    <Route path="/reset-password" element={<AccountPage mode="reset-password" localDemo={localDemoMode} />} />
     <Route path="/dashboard" element={<WithAuth><DashboardRoute /></WithAuth>} />
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>;
