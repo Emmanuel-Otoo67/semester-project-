@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { LibraryBig, LoaderCircle, LogOut } from 'lucide-react';
 import { apiFetch } from '../api/http';
+import { NotificationPlaceholder } from '../components/NotificationPlaceholder';
 
 type Page<T> = { items: T[]; page: number; size: number; total: number };
 type Book = { id: string; title: string; isbn: string | null; publisher: string | null; publicationYear: number | null; description: string | null; authors: string; categories: string; copies: number; availableCopies: number };
@@ -82,7 +83,7 @@ export function Workspace({ staff, token, localDevelopment, signOut }: { staff: 
       {(['overview','catalog','members','loans','holds',...(staff.role==='ADMIN'?['staff','settings','audit']:[])] as View[]).map((item) => <button key={item} className={`workspace-nav-item ${view===item?'selected':''}`} onClick={() => {setView(item);setQuery('');}}>{title[item]}</button>)}
       <div className="workspace-account"><div><strong>{staff.displayName}</strong><small>{staff.role}</small></div>{!localDevelopment&&<button title="Sign out" aria-label="Sign out" onClick={() => void signOut()}><LogOut size={16}/></button>}</div>
     </aside>
-    <main className="workspace-main"><header className="workspace-header"><div><span>LIBRARY WORKSPACE</span><h1>{title[view]}</h1></div><div className="workspace-header-actions">{localDevelopment&&<span className="local-dev-badge">LOCAL DEVELOPMENT</span>}<button className="workspace-refresh" onClick={() => void load()} disabled={loading}>Refresh</button>{view==='catalog'&&<button className="workspace-action" onClick={() => {setEditingBook(null);setShowBookForm(true);}}>Add book</button>}{view==='members'&&<button className="workspace-action" onClick={() => {setEditingMember(null);setShowMemberForm(true);}}>Add member</button>}</div></header>
+    <main className="workspace-main"><header className="workspace-header"><div><span>LIBRARY WORKSPACE</span><h1>{title[view]}</h1></div><div className="workspace-header-actions"><NotificationPlaceholder/>{localDevelopment&&<span className="local-dev-badge">LOCAL DEVELOPMENT</span>}<button className="workspace-refresh" onClick={() => void load()} disabled={loading}>Refresh</button>{view==='catalog'&&<button className="workspace-action" onClick={() => {setEditingBook(null);setShowBookForm(true);}}>Add book</button>}{view==='members'&&<button className="workspace-action" onClick={() => {setEditingMember(null);setShowMemberForm(true);}}>Add member</button>}</div></header>
       {error&&<div className="workspace-error" role="alert">{error}</div>}
       {loading?<div className="workspace-empty"><LoaderCircle className="spin"/> Loading library records…</div>:view==='overview'?<>
         {!dashboard?<div className="workspace-empty">No dashboard data is available yet.</div>:<><section className="workspace-metrics">
