@@ -1,6 +1,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
 const requests: Array<{ url: string; authorization: string | null }> = [];
 let sessionAttempts = 0;
@@ -42,12 +43,12 @@ function installFetch() {
   }));
 }
 
-async function renderApp(localMode: boolean) {
+async function renderApp(localMode: boolean, path = localMode ? '/dashboard' : '/sign-in') {
   vi.stubEnv('VITE_LIBTRACK_LOCAL_DEV', String(localMode));
   vi.stubEnv('VITE_SUPABASE_URL', localMode ? '' : 'https://test-project.supabase.co');
   vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', localMode ? '' : 'test-publishable-key');
   const { default: App } = await import('../App');
-  return render(React.createElement(App));
+  return render(React.createElement(MemoryRouter, { initialEntries: [path] }, React.createElement(App)));
 }
 
 describe('AuthProvider workspace entry', () => {
@@ -80,7 +81,7 @@ describe('AuthProvider workspace entry', () => {
   });
 
   it('keeps the Supabase sign-in gate when local mode is off', async () => {
-    await renderApp(false);
+    await renderApp(false, '/sign-in');
 
     expect(await screen.findByRole('heading', { name: 'Sign in to your library' })).toBeTruthy();
     expect(requests).toHaveLength(0);
