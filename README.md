@@ -23,35 +23,33 @@ The staff workspace includes live dashboard, catalog, member, circulation, holds
 
 ## Local setup
 
-1. Install Java 21, Node.js 20+, npm, and Docker Desktop. The Maven wrapper downloads the pinned Maven distribution on first use, so a global Maven installation is not required.
-2. Copy `.env.example` to `.env`, then fill the local database values and Supabase project URL/issuer/public publishable key. Vite reads `.env`; Spring Boot imports it for local configuration. Keep it untracked and never commit it.
-3. Start the local database: `docker compose up -d postgres`. A fresh local volume gets a small `auth.users` fixture so Flyway can validate the staff foreign key. Existing volumes are not deleted or reset; if it is an older volume, apply the fixture SQL from `docker/postgres/init/01-local-auth-fixture.sql` once as the database owner.
-4. Start the API with environment variables loaded in your shell. In PowerShell:
+1. Install Java 21, Node.js 20.19+ or 22.12+, npm, and Docker Desktop. The Maven wrapper downloads the pinned Maven distribution on first use, so a global Maven installation is not required.
+2. Copy `.env.example` to `.env` if you need local database overrides. Local development mode does not need Supabase URL, keys, or credentials. Spring imports `.env`; keep it untracked and never commit it.
+3. Start local PostgreSQL: `docker compose up -d postgres`. A fresh local volume gets the local `auth.users` compatibility fixture required by the existing schema migration. If an older existing volume does not have `auth.users`, apply the fixture once with `docker compose exec -T postgres psql -U libtrack -d libtrack -f /docker-entrypoint-initdb.d/01-local-auth-fixture.sql`. Existing volumes are not deleted or reset.
+4. In the API terminal, enable the local profile and Flyway migrations, then start Spring:
 
    ```powershell
    $env:LIBTRACK_DB_URL = "jdbc:postgresql://localhost:5433/libtrack"
    $env:LIBTRACK_DB_USER = "libtrack"
    $env:LIBTRACK_DB_PASSWORD = "libtrack_dev_password"
-   $env:SUPABASE_AUTH_ISSUER_URI = "https://<project-ref>.supabase.co/auth/v1"
-   $env:SUPABASE_AUTH_JWT_MODE = "JWKS"
-   $env:LIBTRACK_CORS_ORIGINS = "http://localhost:5173"
+   $env:SPRING_PROFILES_ACTIVE = "local-dev"
    $env:FLYWAY_ENABLED = "true"
    .\mvnw.cmd spring-boot:run
    ```
 
-5. In a second terminal set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, run `npm ci`, then `npm run dev`.
-6. Create a user in **Supabase Dashboard → Authentication → Users → Add user** and set their email/password. They can sign in only after their Auth user UUID has an active row in `public.staff_users`. Existing staff rows with one unambiguous matching email are auto-linked by migration V2. For the first administrator, use a database-owner session after migration:
+5. In a second terminal, install dependencies and start Vite in local mode:
 
-   ```sql
-   INSERT INTO public.staff_users (auth_user_id, login_identifier, display_name, role)
-   VALUES ('<auth-user-uuid>', '<email>', '<display-name>', 'ADMIN');
+   ```powershell
+   npm ci
+   $env:VITE_LIBTRACK_LOCAL_DEV = "true"
+   npm run dev
    ```
 
-   The role is stored server-side. Never grant admin by editing Supabase user metadata.
+6. Open `http://127.0.0.1:5173`. The workspace uses the local development administrator seeded by the API, requires no login, and reads/writes only through Spring and the local PostgreSQL container. The local UI identifies itself as **LOCAL DEVELOPMENT**. Supabase staff-account linking is unavailable while authentication is deferred.
 
-7. The browser calls Spring through Vite's `/api` proxy. In production, set `VITE_API_BASE_URL` to the Spring API origin and `LIBTRACK_CORS_ORIGINS` to the exact deployed frontend origin.
+The API and Vite bind to loopback. The local Spring profile uses only `LIBTRACK_DB_*` database settings and refuses a non-loopback JDBC host before opening a connection. It enables local Flyway migrations and preserves the existing Docker volume. Do not run `docker compose down -v` if you want to keep local data.
 
-There are no shared or pre-created LibTrack sign-in credentials. Each staff member uses the email/password created for them in Supabase Auth. If they can authenticate but are not linked or active in `staff_users`, the API denies access and the sign-in screen explains that staff access must be configured. Set `FLYWAY_ENABLED=true` only for local schema setup or a controlled migration run; leave it false on normal production API instances. Never commit `.env`.
+To return to the authenticated configuration later, stop both processes and start them without `SPRING_PROFILES_ACTIVE=local-dev` and `VITE_LIBTRACK_LOCAL_DEV=true`. Production authentication and JWT validation remain enabled outside the local profile.
 
 ## Connect Supabase
 

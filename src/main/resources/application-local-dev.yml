@@ -11,3 +11,7 @@ spring:
     password: ${LIBTRACK_DB_PASSWORD:libtrack_dev_password}
 server:
   address: 127.0.0.1
+libtrack:
+  cors:
+    allowed-origins:
+      - http://127.0.0.1:5173
