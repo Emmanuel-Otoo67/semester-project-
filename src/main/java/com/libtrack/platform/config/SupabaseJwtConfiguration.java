@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 
 @Configuration
 @Profile("!local-dev")
@@ -29,7 +30,10 @@ public class SupabaseJwtConfiguration {
             return new com.libtrack.platform.auth.LegacySupabaseJwtDecoder(issuer, audience, publishableKey, restClientBuilder, mapper);
         }
         if (!"JWKS".equalsIgnoreCase(jwtMode)) throw new IllegalStateException("SUPABASE_AUTH_JWT_MODE must be JWKS or LEGACY_HS256.");
-        var decoder = NimbusJwtDecoder.withJwkSetUri(issuer.replaceAll("/$", "") + "/.well-known/jwks.json").build();
+        var decoder = NimbusJwtDecoder.withJwkSetUri(issuer.replaceAll("/$", "") + "/.well-known/jwks.json")
+                .jwsAlgorithm(SignatureAlgorithm.ES256)
+                .jwsAlgorithm(SignatureAlgorithm.RS256)
+                .build();
         OAuth2TokenValidator<Jwt> issuerAndTime = JwtValidators.createDefaultWithIssuer(issuer);
         OAuth2TokenValidator<Jwt> audienceValidator = jwt -> jwt.getAudience().contains(audience)
                 ? OAuth2TokenValidatorResult.success()
