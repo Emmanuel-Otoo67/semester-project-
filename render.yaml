@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: libtrack-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: FLYWAY_ENABLED
+        value: "false"
+      - key: SUPABASE_APP_DB_URL
+        sync: false
+      - key: SUPABASE_APP_DB_USER
+        sync: false
+      - key: SUPABASE_APP_DB_PASSWORD
+        sync: false
+      - key: SUPABASE_AUTH_ISSUER_URI
+        sync: false
+      - key: SUPABASE_AUTH_AUDIENCE
+        value: authenticated
+      - key: SUPABASE_AUTH_JWT_MODE
+        value: JWKS
+      - key: LIBTRACK_CORS_ORIGINS
+        sync: false

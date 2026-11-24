@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+!.env.example
+.superpowers
+.vercel
+node_modules
+dist
+target
+outputs
+work
+hs_err_pid*.log
+replay_pid*.log
