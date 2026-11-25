@@ -34,7 +34,7 @@ describe('LibTrack account screens', () => {
     expect(screen.getByText(/local demo/i)).toBeTruthy();
     if (mode !== 'reset-password') expect(screen.getByLabelText('Email address')).toBeTruthy();
     if (mode === 'create-account') {
-      expect(screen.getByLabelText('Your name')).toBeTruthy();
+      expect(screen.getByLabelText('Student index number')).toBeTruthy();
       expect(screen.getByLabelText('Confirm password')).toBeTruthy();
     }
     if (mode === 'reset-password') expect(screen.getByLabelText('Confirm password')).toBeTruthy();
@@ -50,9 +50,8 @@ describe('LibTrack account screens', () => {
     expect(screen.getByRole('link', { name: 'Back to sign in' }).getAttribute('href')).toBe('/sign-in');
   });
 
-  it('rejects malformed email and short account passwords inline', () => {
+  it('rejects malformed email, missing student index number and short passwords inline', () => {
     renderAccount('create-account');
-    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Jordan Lee' } });
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'not-an-email' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'short' } });
     fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'short' } });
@@ -60,13 +59,14 @@ describe('LibTrack account screens', () => {
     submitForm('Create your account');
 
     expect(screen.getByText('Enter a valid email address.')).toBeTruthy();
+    expect(screen.getByText('Enter your student index number.')).toBeTruthy();
     expect(screen.getByText('Use at least 8 characters.')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Library overview' })).toBeNull();
   });
 
   it('requires matching passwords when creating an account', () => {
     renderAccount('create-account');
-    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Jordan Lee' } });
+    fireEvent.change(screen.getByLabelText('Student index number'), { target: { value: 'S-101' } });
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'jordan@example.test' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password8' } });
     fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'different8' } });
@@ -79,7 +79,7 @@ describe('LibTrack account screens', () => {
   it('opens the local workspace after a valid demo account form without saving credentials', () => {
     const setItem = vi.spyOn(Storage.prototype, 'setItem');
     renderAccount('create-account');
-    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Jordan Lee' } });
+    fireEvent.change(screen.getByLabelText('Student index number'), { target: { value: 'S-101' } });
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'jordan@example.test' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password8' } });
     fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'password8' } });
@@ -104,17 +104,39 @@ describe('LibTrack account screens', () => {
     expect(screen.getByRole('status').textContent).toMatch(/password was not changed/i);
   });
 
-  it('does not let non-local account creation enter the dashboard', () => {
+  it('does not let non-local account creation proceed without a connected signup handler', () => {
     renderAccount('create-account', false);
-    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Jordan Lee' } });
+    fireEvent.change(screen.getByLabelText('Student index number'), { target: { value: 'S-101' } });
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'jordan@example.test' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password8' } });
     fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'password8' } });
 
     submitForm('Create your account');
 
-    expect(screen.getByRole('alert').textContent).toMatch(/not enabled/i);
+    expect(screen.getByRole('alert').textContent).toMatch(/not configured/i);
     expect(screen.queryByRole('heading', { name: 'Library overview' })).toBeNull();
+  });
+
+  it('creates student accounts through the student registration callback', async () => {
+    const createStudent = vi.fn().mockResolvedValue('confirmation');
+    render(<MemoryRouter initialEntries={['/create-account']}><AccountPage mode="create-account" localDemo={false} onCreateStudent={createStudent} /></MemoryRouter>);
+    fireEvent.change(screen.getByLabelText('Student index number'), { target: { value: 'S-101' } });
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'jordan@example.test' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password8' } });
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'password8' } });
+    submitForm('Create your account');
+    await waitFor(() => expect(createStudent).toHaveBeenCalledWith('S-101', 'jordan@example.test', 'password8'));
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', expect.stringMatching(/confirm the address/i));
+  });
+
+  it('lets a signed-in student finish linking with their index number', async () => {
+    const complete = vi.fn().mockResolvedValue(undefined);
+    render(<MemoryRouter initialEntries={['/create-account']}><AccountPage mode="create-account" localDemo={false} hasSession onCompleteStudent={complete} /></MemoryRouter>);
+    fireEvent.change(screen.getByLabelText('Student index number'), { target: { value: 'S-101' } });
+    submitForm('Create your account');
+    await waitFor(() => expect(complete).toHaveBeenCalledWith('S-101'));
+    expect(screen.queryByLabelText('Email address')).toBeNull();
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', expect.stringMatching(/account linked/i));
   });
 
   it('uses the existing sign-in callback for non-local authentication', async () => {

@@ -32,4 +32,12 @@ public class StaffIdentityService {
         return repository.findActiveByAuthUserId(authUserId).orElseThrow(() ->
                 new StaffAccessDeniedException("This Supabase account is not linked to an active LibTrack staff account."));
     }
+
+    public CurrentStaff requireAdministrator(Jwt jwt) {
+        CurrentStaff staff = requireCurrentStaff(jwt);
+        if (staff.role() != StaffRole.ADMIN) {
+            throw new StaffAccessDeniedException("Administrator access is required to link a student account.");
+        }
+        return staff;
+    }
 }

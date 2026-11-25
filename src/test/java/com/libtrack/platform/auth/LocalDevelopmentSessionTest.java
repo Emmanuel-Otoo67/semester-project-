@@ -26,6 +26,7 @@ class LocalDevelopmentSessionTest {
     @Autowired MockMvc mvc;
     @Autowired ApplicationContext context;
     @MockBean StaffIdentityService identityService;
+    @MockBean StudentIdentityService studentIdentityService;
 
     @Test
     void allowsAnonymousSessionAndReturnsLocalAdministrator() throws Exception {

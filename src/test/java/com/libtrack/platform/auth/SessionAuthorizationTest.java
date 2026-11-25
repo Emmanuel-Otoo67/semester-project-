@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SessionAuthorizationTest {
     @Autowired MockMvc mvc;
     @MockBean StaffIdentityService identityService;
+    @MockBean StudentIdentityService studentIdentityService;
     @MockBean JwtDecoder jwtDecoder;
 
     @Test
@@ -55,9 +56,27 @@ class SessionAuthorizationTest {
         UUID authId = UUID.fromString("c9f46857-346d-4b4e-a151-d06c764ea8df");
         when(identityService.requireCurrentStaff(any(Jwt.class))).thenThrow(new StaffAccessDeniedException(
                 "This Supabase account is not linked to an active LibTrack staff account."));
+        when(studentIdentityService.requireCurrentStudent(any(Jwt.class))).thenThrow(new StudentAccessDeniedException(
+                "This Supabase account is not linked to an active LibTrack student."));
 
         mvc.perform(get("/api/v1/session").with(jwt().jwt(token -> token.subject(authId.toString()))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.detail").value("This Supabase account is not linked to an active LibTrack staff account."));
+    }
+
+    @Test
+    void resolvesStudentIdentityFromTheServerLinkedMemberRecord() throws Exception {
+        UUID authId = UUID.fromString("c9f46857-346d-4b4e-a151-d06c764ea8df");
+        UUID studentId = UUID.fromString("43855af5-c6cc-4a48-a3ae-15fbb255de8e");
+        when(identityService.requireCurrentStaff(any(Jwt.class))).thenThrow(new StaffAccessDeniedException("not staff"));
+        when(studentIdentityService.requireCurrentStudent(any(Jwt.class))).thenReturn(new CurrentStudent(
+                studentId, authId, "S-101", "Ama Mensah", "Computer Science", "Level 300", "ama@example.edu", null));
+
+        mvc.perform(get("/api/v1/session").with(jwt().jwt(token -> token.subject(authId.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("STUDENT"))
+                .andExpect(jsonPath("$.studentId").value(studentId.toString()))
+                .andExpect(jsonPath("$.libraryNumber").value("S-101"))
+                .andExpect(jsonPath("$.staffId").doesNotExist());
     }
 }

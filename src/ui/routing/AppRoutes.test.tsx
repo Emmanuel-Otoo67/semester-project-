@@ -22,7 +22,7 @@ function installFetch() {
     }
     if (url.endsWith('/api/v1/dashboard/summary')) {
       return json({ titles: 0, activeMembers: 0, availableCopies: 0, onLoanCopies: 0,
-        overdueLoans: 0, dueToday: 0, actionableHolds: 0, recentActivity: [] });
+        overdueLoans: 0, dueToday: 0, actionableHolds: 0, registeredStudents: 0, currentlyInside: 0, todayAttendance: 0, recentActivity: [] });
     }
     return json({ items: [], page: 0, size: 50, total: 0 });
   }));

@@ -7,6 +7,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import com.libtrack.catalog.api.CatalogNotFoundException;
 import com.libtrack.members.api.MemberNotFoundException;
 import com.libtrack.circulation.api.CirculationConflictException;
+import com.libtrack.attendance.api.AttendanceConflictException;
+import com.libtrack.platform.auth.StudentAccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -38,6 +40,13 @@ public class ApiExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(AttendanceConflictException.class)
+    ProblemDetail handleAttendanceConflict(AttendanceConflictException exception) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problem.setTitle("Attendance action not available");
+        return problem;
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     ProblemDetail handleBadRequest(IllegalArgumentException exception) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
@@ -49,6 +58,13 @@ public class ApiExceptionHandler {
     ProblemDetail handleAccessDenied(AccessDeniedException exception) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
         problem.setTitle("Staff access required");
+        return problem;
+    }
+
+    @ExceptionHandler(StudentAccessDeniedException.class)
+    ProblemDetail handleStudentRegistrationDenied(StudentAccessDeniedException exception) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
+        problem.setTitle("Student account verification required");
         return problem;
     }
 

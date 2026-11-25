@@ -11,4 +11,6 @@ public record MemberRequest(@NotBlank @Size(max=50) String libraryNumber,
                             @Pattern(regexp="STUDENT|STAFF|OTHER") String memberType,
                             @Email @Size(max=254) String email,
                             @Size(max=40) String phone,
-                            @Pattern(regexp="ACTIVE|SUSPENDED|INACTIVE") String status) {}
+                            @Pattern(regexp="ACTIVE|SUSPENDED|INACTIVE") String status,
+                            @Size(max=160) String programme,
+                            @Size(max=80) String level) {}

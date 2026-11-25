@@ -19,4 +19,5 @@ public class MemberController {
     @GetMapping("/{id}") public MemberRecord get(@PathVariable UUID id){return service.get(id);}
     @PostMapping @ResponseStatus(HttpStatus.CREATED) public MemberRecord create(@Valid @RequestBody MemberRequest request,@AuthenticationPrincipal Jwt jwt){return service.create(request,identities.requireCurrentStaff(jwt).id());}
     @PutMapping("/{id}") public MemberRecord update(@PathVariable UUID id,@Valid @RequestBody MemberRequest request,@AuthenticationPrincipal Jwt jwt){return service.update(id,request,identities.requireCurrentStaff(jwt).id());}
+    @PostMapping("/{id}/account-link") public MemberRecord linkStudentAccount(@PathVariable UUID id,@Valid @RequestBody StudentAccountLinkRequest request,@AuthenticationPrincipal Jwt jwt){return service.linkStudentAccount(id,request.authUserId(),identities.requireAdministrator(jwt).id());}
 }

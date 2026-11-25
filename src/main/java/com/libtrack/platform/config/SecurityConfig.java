@@ -19,6 +19,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 import com.libtrack.platform.auth.StaffAccessDeniedException;
 import com.libtrack.platform.auth.StaffIdentityService;
+import com.libtrack.platform.auth.StudentIdentityService;
+import com.libtrack.platform.auth.StudentAccessDeniedException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.http.MediaType;
 import java.nio.charset.StandardCharsets;
@@ -39,17 +41,41 @@ public class SecurityConfig {
 
     @Bean
     @Profile("!local-dev")
-    SecurityFilterChain securityFilterChain(HttpSecurity http, StaffIdentityService staffIdentityService) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, StaffIdentityService staffIdentityService, StudentIdentityService studentIdentityService) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/api/v1/health").permitAll()
+                        .requestMatchers("/api/v1/student-registration").authenticated()
+                        .requestMatchers("/api/v1/session").access(sessionAuthorizationManager(staffIdentityService, studentIdentityService))
+                        .requestMatchers("/api/v1/student/**").access(studentAuthorizationManager(studentIdentityService))
                         .anyRequest().access(staffAuthorizationManager(staffIdentityService)))
                 .exceptionHandling(exceptions -> exceptions.accessDeniedHandler(staffDeniedHandler()))
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
                 .build();
+    }
+
+    private AuthorizationManager<RequestAuthorizationContext> sessionAuthorizationManager(StaffIdentityService staff, StudentIdentityService students) {
+        return (authentication, context) -> {
+            var current = authentication.get();
+            if (current == null || !current.isAuthenticated() || !(current.getPrincipal() instanceof Jwt jwt)) return new AuthorizationDecision(false);
+            try { staff.requireCurrentStaff(jwt); return new AuthorizationDecision(true); }
+            catch (StaffAccessDeniedException denied) {
+                try { students.requireCurrentStudent(jwt); return new AuthorizationDecision(true); }
+                catch (StudentAccessDeniedException ignored) { return new AuthorizationDecision(false); }
+            }
+        };
+    }
+
+    private AuthorizationManager<RequestAuthorizationContext> studentAuthorizationManager(StudentIdentityService identities) {
+        return (authentication, context) -> {
+            var current = authentication.get();
+            if (current == null || !current.isAuthenticated() || !(current.getPrincipal() instanceof Jwt jwt)) return new AuthorizationDecision(false);
+            try { identities.requireCurrentStudent(jwt); return new AuthorizationDecision(true); }
+            catch (StudentAccessDeniedException denied) { return new AuthorizationDecision(false); }
+        };
     }
 
     private AuthorizationManager<RequestAuthorizationContext> staffAuthorizationManager(StaffIdentityService identities) {
@@ -71,7 +97,11 @@ public class SecurityConfig {
             response.setStatus(403);
             response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-            response.getWriter().write("{\"title\":\"Staff access required\",\"status\":403,\"detail\":\"This Supabase account is not linked to an active LibTrack staff account.\"}");
+            if (request.getRequestURI().startsWith("/api/v1/student/")) {
+                response.getWriter().write("{\"title\":\"Student access required\",\"status\":403,\"detail\":\"This Supabase account is not linked to an active LibTrack student.\"}");
+            } else {
+                response.getWriter().write("{\"title\":\"Staff access required\",\"status\":403,\"detail\":\"This Supabase account is not linked to an active LibTrack staff account.\"}");
+            }
         };
     }
 
