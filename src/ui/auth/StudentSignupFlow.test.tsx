@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 
 const auth = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -15,7 +16,7 @@ vi.mock('./supabase', () => ({
   supabase: { auth },
 }));
 
-import { AuthProvider, useAuth } from './AuthProvider';
+import { StudentSignupProvider, useStudentSignup } from './StudentSignupProvider';
 
 const details = {
   indexNumber: 'S-101',
@@ -26,10 +27,11 @@ const details = {
 };
 
 function SignupProbe() {
-  const { createStudentAccount, student } = useAuth();
+  const { createStudentAccount } = useStudentSignup();
+  const [created, setCreated] = useState(false);
   return <>
-    <button onClick={() => void createStudentAccount(details, 'ama@example.edu', 'password8').catch(() => undefined)}>Create account</button>
-    {student && <p>{student.displayName}</p>}
+    <button onClick={() => void createStudentAccount(details, 'ama@example.edu', 'password8').then(() => setCreated(true)).catch(() => undefined)}>Create account</button>
+    {created && <p>created</p>}
   </>;
 }
 
@@ -45,10 +47,6 @@ describe('single-step student signup', () => {
     });
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       if (String(input).endsWith('/api/v1/student-registration')) return Response.json({ status: 'created' });
-      if (String(input).endsWith('/api/v1/session')) return Response.json({
-        authenticated: true, studentId: 'student-1', libraryNumber: 'S-101', displayName: 'Ama Mensah',
-        programme: 'Computer Science', level: 'Level 300', role: 'STUDENT',
-      });
       throw new Error(`Unexpected API request: ${String(input)} ${init?.method ?? 'GET'}`);
     }));
   });
@@ -58,11 +56,12 @@ describe('single-step student signup', () => {
     vi.unstubAllGlobals();
   });
 
-  it('signs in an existing email, creates the member profile, and resolves the student dashboard', async () => {
-    render(<AuthProvider><SignupProbe /></AuthProvider>);
+  it('creates the member profile without resolving staff or student session first', async () => {
+    render(<StudentSignupProvider><SignupProbe /></StudentSignupProvider>);
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByText('Ama Mensah')).toBeTruthy();
+    expect(await screen.findByText('created')).toBeTruthy();
+    expect(auth.getSession).not.toHaveBeenCalled();
     expect(auth.signInWithPassword).toHaveBeenCalledWith({ email: 'ama@example.edu', password: 'password8' });
     const calls = vi.mocked(fetch).mock.calls;
     const registration = calls.find(([url]) => String(url).endsWith('/api/v1/student-registration'));
@@ -70,6 +69,6 @@ describe('single-step student signup', () => {
       libraryNumber: 'S-101', firstName: 'Ama', lastName: 'Mensah',
       programme: 'Computer Science', level: 'Level 300',
     });
-    await waitFor(() => expect(calls.some(([url]) => String(url).endsWith('/api/v1/session'))).toBe(true));
+    await waitFor(() => expect(calls.some(([url]) => String(url).endsWith('/api/v1/session'))).toBe(false));
   });
 });

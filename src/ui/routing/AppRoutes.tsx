@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { ArrowRight, LibraryBig, LoaderCircle } from 'lucide-react';
 import { AuthProvider, useAuth } from '../auth/AuthProvider';
+import { StudentSignupProvider, useStudentSignup } from '../auth/StudentSignupProvider';
 import AccountPage from '../pages/AccountPage';
 import HomePage from '../pages/HomePage';
 import { Workspace, WorkspaceLoading } from '../workspace/Workspace';
@@ -22,10 +23,7 @@ function SignInRoute() {
 }
 
 function StudentRegistrationRoute() {
-  const { loading, session, staff, student, createStudentAccount } = useAuth();
-  if (loading) return <main className="auth-shell"><div className="auth-card auth-loading"><LoaderCircle className="spin" /><span>Checking your LibTrack session…</span></div></main>;
-  if (staff && session) return <Navigate to="/dashboard" replace />;
-  if (student && session) return <Navigate to="/student" replace />;
+  const { createStudentAccount } = useStudentSignup();
   return <AccountPage mode="create-account" localDemo={false} onCreateStudent={createStudentAccount} />;
 }
 
@@ -63,8 +61,8 @@ function KioskRoute() {
   return <Suspense fallback={<WorkspaceLoading />}><KioskPage token={session?.access_token} staffName={staff.displayName} signOut={signOut} /></Suspense>;
 }
 
-function WithAuth({ children, resolveIdentityOnLoad = true }: { children: ReactNode; resolveIdentityOnLoad?: boolean }) {
-  return <AuthProvider resolveIdentityOnLoad={resolveIdentityOnLoad}>{children}</AuthProvider>;
+function WithAuth({ children }: { children: ReactNode }) {
+  return <AuthProvider>{children}</AuthProvider>;
 }
 
 export default function AppRoutes() {
@@ -77,7 +75,7 @@ export default function AppRoutes() {
     <Route path="/sign-in" element={signInPage} />
     <Route path="/create-account" element={localDemoMode
       ? <AccountPage mode="create-account" localDemo />
-      : <WithAuth resolveIdentityOnLoad={false}><StudentRegistrationRoute /></WithAuth>} />
+      : <StudentSignupProvider><StudentRegistrationRoute /></StudentSignupProvider>} />
     <Route path="/forgot-password" element={<AccountPage mode="forgot-password" localDemo={localDemoMode} />} />
     <Route path="/reset-password" element={<AccountPage mode="reset-password" localDemo={localDemoMode} />} />
     <Route path="/dashboard" element={<WithAuth><DashboardRoute /></WithAuth>} />
