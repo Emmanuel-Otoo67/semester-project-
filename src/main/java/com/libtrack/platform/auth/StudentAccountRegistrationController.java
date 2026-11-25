@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/student-registration")
+@RequestMapping({"/api/v1/student-registration", "/api/v1/student-registration/"})
 public class StudentAccountRegistrationController {
     private final StudentAccountRegistrationService registration;
 

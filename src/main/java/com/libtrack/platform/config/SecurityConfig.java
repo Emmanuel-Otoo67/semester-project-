@@ -48,7 +48,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/api/v1/health").permitAll()
-                        .requestMatchers("/api/v1/student-registration").authenticated()
+                        .requestMatchers("/api/v1/student-registration", "/api/v1/student-registration/**").authenticated()
                         .requestMatchers("/api/v1/session").access(sessionAuthorizationManager(staffIdentityService, studentIdentityService))
                         .requestMatchers("/api/v1/student/**").access(studentAuthorizationManager(studentIdentityService))
                         .anyRequest().access(staffAuthorizationManager(staffIdentityService)))
@@ -97,7 +97,10 @@ public class SecurityConfig {
             response.setStatus(403);
             response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-            if (request.getRequestURI().startsWith("/api/v1/student/")) {
+            if (request.getRequestURI().equals("/api/v1/student-registration")
+                    || request.getRequestURI().startsWith("/api/v1/student-registration/")) {
+                response.getWriter().write("{\"title\":\"Student signup required\",\"status\":403,\"detail\":\"Sign in with the student account you are creating, then submit the student signup form again.\"}");
+            } else if (request.getRequestURI().startsWith("/api/v1/student/")) {
                 response.getWriter().write("{\"title\":\"Student access required\",\"status\":403,\"detail\":\"This Supabase account is not linked to an active LibTrack student.\"}");
             } else if (request.getRequestURI().equals("/api/v1/session")) {
                 response.getWriter().write("{\"title\":\"LibTrack profile not found\",\"status\":403,\"detail\":\"This account does not have a LibTrack profile yet. Students can create their account and profile together from the student signup form.\"}");
