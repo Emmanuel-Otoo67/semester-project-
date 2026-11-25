@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { Workspace } from './Workspace';
 import { MemoryRouter } from 'react-router-dom';
 
-function renderWorkspace() { return render(<MemoryRouter><Workspace staff={{ displayName: 'Library Staff', role: 'LIBRARIAN' }} localDevelopment signOut={vi.fn()} /></MemoryRouter>); }
+function renderWorkspace() { return render(<MemoryRouter><Workspace staff={{ displayName: 'Library Staff', role: 'ADMIN' }} localDevelopment signOut={vi.fn()} /></MemoryRouter>); }
 
 describe('LibTrack librarian attendance and student setup', () => {
   const fetchMock = vi.fn();

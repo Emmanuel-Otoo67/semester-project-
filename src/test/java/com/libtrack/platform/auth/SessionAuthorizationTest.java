@@ -38,7 +38,7 @@ class SessionAuthorizationTest {
         UUID authId = UUID.fromString("c9f46857-346d-4b4e-a151-d06c764ea8df");
         UUID staffId = UUID.fromString("1f91c6f5-09a5-49dc-82ef-29a2a9135f0b");
         when(identityService.requireCurrentStaff(any(Jwt.class))).thenReturn(
-                new CurrentStaff(staffId, authId, "Ada Librarian", StaffRole.LIBRARIAN));
+                new CurrentStaff(staffId, authId, "Ada Librarian", StaffRole.ADMIN));
 
         mvc.perform(get("/api/v1/session").accept(MediaType.APPLICATION_JSON)
                         .with(jwt().jwt(token -> token.subject(authId.toString())
@@ -47,7 +47,7 @@ class SessionAuthorizationTest {
                 .andExpect(jsonPath("$.authenticated").value(true))
                 .andExpect(jsonPath("$.staffId").value(staffId.toString()))
                 .andExpect(jsonPath("$.displayName").value("Ada Librarian"))
-                .andExpect(jsonPath("$.role").value("LIBRARIAN"))
+                .andExpect(jsonPath("$.role").value("ADMIN"))
                 .andExpect(jsonPath("$.username").doesNotExist());
     }
 

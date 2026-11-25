@@ -25,6 +25,6 @@ public class StaffController {
     @PostMapping @ResponseStatus(HttpStatus.CREATED) public StaffService.StaffRow link(@Valid @RequestBody LinkRequest request,@AuthenticationPrincipal Jwt jwt){return service.link(request,admin(jwt));}
     @PatchMapping("/{id}") public StaffService.StaffRow update(@PathVariable UUID id,@Valid @RequestBody UpdateRequest request,@AuthenticationPrincipal Jwt jwt){return service.update(id,request,admin(jwt));}
     private CurrentStaff admin(Jwt jwt){CurrentStaff staff=identities.requireCurrentStaff(jwt);if(staff.role()!=StaffRole.ADMIN)throw new org.springframework.security.access.AccessDeniedException("Only a LibTrack administrator can manage staff accounts.");return staff;}
-    public record LinkRequest(@NotNull UUID authUserId,@NotBlank @Email @Size(max=190) String email,@NotBlank @Size(max=160) String displayName,@NotNull StaffRole role){}
-    public record UpdateRequest(@NotBlank @Size(max=160) String displayName,@NotNull StaffRole role,@NotNull Boolean active){}
+    public record LinkRequest(@NotNull UUID authUserId,@NotBlank @Email @Size(max=190) String email,@NotBlank @Size(max=160) String displayName){}
+    public record UpdateRequest(@NotBlank @Size(max=160) String displayName,@NotNull Boolean active){}
 }

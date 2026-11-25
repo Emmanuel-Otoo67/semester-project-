@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { ApiError, apiFetch } from '../api/http';
 import { localDevelopmentMode, supabase, supabaseConfigured } from './supabase';
 
-export type StaffSession = { authenticated: true; localDevelopment?: boolean; staffId: string; displayName: string; role: 'ADMIN' | 'LIBRARIAN' };
+export type StaffSession = { authenticated: true; localDevelopment?: boolean; staffId: string; displayName: string; role: 'ADMIN' };
 export type StudentSession = { authenticated: true; studentId: string; libraryNumber: string; displayName: string; programme: string | null; level: string | null; email?: string | null; phone?: string | null; role: 'STUDENT' };
 type IdentitySession = StaffSession | StudentSession;
 type AuthState = {
@@ -114,7 +114,9 @@ export function AuthProvider({ children, restoreSessionOnMount = true }: { child
     setSession(data.session);
     const role = await resolveStaff(data.session);
     if (!role) throw new Error('This account does not have an active LibTrack profile. Students can create their account from Student sign in.');
-    if (role !== audience) {
+    const accountIsStudent = role === 'STUDENT';
+    const requestedStudentPortal = audience === 'STUDENT';
+    if (accountIsStudent !== requestedStudentPortal) {
       throw new Error(role === 'STUDENT'
         ? 'This is a student account. Choose Student sign in.'
         : 'This is a staff account. Choose Staff sign in.');

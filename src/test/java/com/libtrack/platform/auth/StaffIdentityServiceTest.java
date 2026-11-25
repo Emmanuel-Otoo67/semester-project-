@@ -19,7 +19,7 @@ class StaffIdentityServiceTest {
 
     @Test
     void resolvesRoleFromStaffRecordAndNotUserMetadata() {
-        CurrentStaff staff = new CurrentStaff(STAFF_ID, AUTH_ID, "Ada Librarian", StaffRole.LIBRARIAN);
+        CurrentStaff staff = new CurrentStaff(STAFF_ID, AUTH_ID, "Ada Librarian", StaffRole.ADMIN);
         when(repository.findActiveByAuthUserId(AUTH_ID)).thenReturn(Optional.of(staff));
 
         CurrentStaff actual = service.requireCurrentStaff(jwt(AUTH_ID, "ADMIN"));

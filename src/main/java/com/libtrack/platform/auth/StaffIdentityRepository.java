@@ -18,7 +18,8 @@ public class StaffIdentityRepository {
 
     public Optional<CurrentStaff> findActiveByAuthUserId(UUID authUserId) {
         return jdbc.query("""
-                select id, auth_user_id, display_name, role
+                select id, auth_user_id, display_name,
+                       case when role='LIBRARIAN' then 'ADMIN' else role end as role
                 from staff_users
                 where auth_user_id = ? and active = true
                 """, result -> result.next()
@@ -30,7 +31,8 @@ public class StaffIdentityRepository {
 
     public Optional<CurrentStaff> findLocalDevelopmentAdmin() {
         return jdbc.query("""
-                select id, auth_user_id, display_name, role
+                select id, auth_user_id, display_name,
+                       case when role='LIBRARIAN' then 'ADMIN' else role end as role
                 from staff_users
                 where login_identifier = ? and active = true
                 """, result -> result.next()
