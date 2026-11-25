@@ -63,8 +63,8 @@ function KioskRoute() {
   return <Suspense fallback={<WorkspaceLoading />}><KioskPage token={session?.access_token} staffName={staff.displayName} signOut={signOut} /></Suspense>;
 }
 
-function WithAuth({ children }: { children: ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+function WithAuth({ children, resolveIdentityOnLoad = true }: { children: ReactNode; resolveIdentityOnLoad?: boolean }) {
+  return <AuthProvider resolveIdentityOnLoad={resolveIdentityOnLoad}>{children}</AuthProvider>;
 }
 
 export default function AppRoutes() {
@@ -77,7 +77,7 @@ export default function AppRoutes() {
     <Route path="/sign-in" element={signInPage} />
     <Route path="/create-account" element={localDemoMode
       ? <AccountPage mode="create-account" localDemo />
-      : <WithAuth><StudentRegistrationRoute /></WithAuth>} />
+      : <WithAuth resolveIdentityOnLoad={false}><StudentRegistrationRoute /></WithAuth>} />
     <Route path="/forgot-password" element={<AccountPage mode="forgot-password" localDemo={localDemoMode} />} />
     <Route path="/reset-password" element={<AccountPage mode="reset-password" localDemo={localDemoMode} />} />
     <Route path="/dashboard" element={<WithAuth><DashboardRoute /></WithAuth>} />

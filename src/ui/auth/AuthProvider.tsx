@@ -34,7 +34,7 @@ async function createStudentProfile(details: StudentSignupDetails, current: Sess
   }, current.access_token);
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children, resolveIdentityOnLoad = true }: { children: ReactNode; resolveIdentityOnLoad?: boolean }) {
   const [session, setSession] = useState<Session | null>(null);
   const [staff, setStaff] = useState<StaffSession | null>(null);
   const [student, setStudent] = useState<StudentSession | null>(null);
@@ -99,16 +99,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (!supabase) { setLoading(false); return; }
     let alive = true;
-    void supabase.auth.getSession().then(async ({ data, error: sessionError }) => {
-      if (!alive) return;
-      if (sessionError) setError('Your sign-in session could not be restored. Sign in again.');
-      setSession(data.session);
-      await resolveStaff(data.session);
-      if (alive) setLoading(false);
-    });
+    if (resolveIdentityOnLoad) {
+      void supabase.auth.getSession().then(async ({ data, error: sessionError }) => {
+        if (!alive) return;
+        if (sessionError) setError('Your sign-in session could not be restored. Sign in again.');
+        setSession(data.session);
+        await resolveStaff(data.session);
+        if (alive) setLoading(false);
+      });
+    } else {
+      // The student signup page must not probe staff/student access before it
+      // has created the member profile for a newly authenticated account.
+      setSession(null); setStaff(null); setStudent(null); setError(null); setLoading(false);
+    }
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!alive) return;
       setSession(nextSession);
+      if (!resolveIdentityOnLoad) return;
       // signUp emits SIGNED_IN before the student row is inserted. Resolving
       // /session here races registration and briefly treats a new student as staff.
       if (studentSignupInProgress.current) return;
@@ -117,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleUnauthorized = () => { void supabase?.auth.signOut(); };
     window.addEventListener('libtrack:unauthorized', handleUnauthorized);
     return () => { alive = false; listener.subscription.unsubscribe(); window.removeEventListener('libtrack:unauthorized', handleUnauthorized); };
-  }, [resolveStaff]);
+  }, [resolveIdentityOnLoad, resolveStaff]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     if (localDevelopmentMode) throw new Error('Sign-in is disabled in local development mode.');
