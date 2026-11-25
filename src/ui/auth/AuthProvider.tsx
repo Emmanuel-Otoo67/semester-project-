@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { ApiError, apiFetch } from '../api/http';
 import { localDevelopmentMode, supabase, supabaseConfigured } from './supabase';
@@ -40,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [student, setStudent] = useState<StudentSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const studentSignupInProgress = useRef(false);
 
   const resolveStaff = useCallback(async (current: Session | null) => {
     if (localDevelopmentMode) {
@@ -108,6 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!alive) return;
       setSession(nextSession);
+      // signUp emits SIGNED_IN before the student row is inserted. Resolving
+      // /session here races registration and briefly treats a new student as staff.
+      if (studentSignupInProgress.current) return;
       window.setTimeout(() => { if (alive) void resolveStaff(nextSession); }, 0);
     });
     const handleUnauthorized = () => { void supabase?.auth.signOut(); };
@@ -138,29 +142,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(null); setStaff(null); setStudent(null);
     }
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: normalizedEmail, password,
-      options: { emailRedirectTo: `${window.location.origin}/create-account?confirmed=1` },
-    });
-    let current = data.session;
-    if (signUpError && /already registered|already exists/i.test(signUpError.message)) {
-      const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
-      if (signInError) throw new Error('This email already has an account. The password entered could not sign in to it.');
-      current = signedIn.session;
-    } else if (signUpError) {
-      throw new Error(signUpError.message);
-    }
-    if (!current) {
-      const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
-      if (signInError || !signedIn.session) return 'confirmation';
-      current = signedIn.session;
-    }
+    studentSignupInProgress.current = true;
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: normalizedEmail, password,
+        options: { emailRedirectTo: `${window.location.origin}/create-account?confirmed=1` },
+      });
+      let current = data.session;
+      if (signUpError && /already registered|already exists/i.test(signUpError.message)) {
+        const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+        if (signInError) throw new Error('This email already has an account. The password entered could not sign in to it.');
+        current = signedIn.session;
+      } else if (signUpError) {
+        throw new Error(signUpError.message);
+      }
+      if (!current) {
+        const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+        if (signInError || !signedIn.session) return 'confirmation';
+        current = signedIn.session;
+      }
 
-    setSession(current);
-    await createStudentProfile(details, current);
-    const role = await resolveStaff(current);
-    if (role !== 'STUDENT') throw new Error('Your profile could not be saved. Check the index number and try again.');
-    return 'ready';
+      setSession(current);
+      await createStudentProfile(details, current);
+      const role = await resolveStaff(current);
+      if (role !== 'STUDENT') throw new Error('Your profile could not be saved. Check the index number and try again.');
+      return 'ready';
+    } finally {
+      studentSignupInProgress.current = false;
+    }
   }, [resolveStaff]);
 
   const signOut = useCallback(async () => {
