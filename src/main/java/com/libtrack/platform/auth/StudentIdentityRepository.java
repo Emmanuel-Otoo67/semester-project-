@@ -33,7 +33,7 @@ public class StudentIdentityRepository {
                 insert into public.members as member
                     (library_number,first_name,last_name,member_type,email,programme,level,status,auth_user_id)
                 select ?,?,?, 'STUDENT',?,?,?, 'ACTIVE',?
-                on conflict do update
+                on conflict (library_number) do update
                    set auth_user_id=excluded.auth_user_id,
                        first_name=excluded.first_name,
                        last_name=excluded.last_name,
