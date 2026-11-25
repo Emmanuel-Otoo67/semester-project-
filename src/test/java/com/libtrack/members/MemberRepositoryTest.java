@@ -17,17 +17,17 @@ class MemberRepositoryTest {
     private final MemberRepository repository = new MemberRepository(jdbc);
 
     @Test
-    void createPersistsStudentProgrammeAndLevel() {
+    void updatePersistsStudentProgrammeAndLevel() {
         UUID id = UUID.randomUUID();
-        String insert = "insert into members(library_number,first_name,last_name,member_type,email,phone,programme,level,status) values (?,?,?,?,?,?,?,?,coalesce(?, 'ACTIVE')) returning id";
-        when(jdbc.queryForObject(eq(insert), eq(UUID.class), eq("S-101"), eq("Ama"), eq("Mensah"), eq("STUDENT"),
-                eq("ama@example.edu"), eq(null), eq("Computer Science"), eq("Level 300"), eq("ACTIVE")))
-                .thenReturn(id);
+        String update = "update members set library_number=?,first_name=?,last_name=?,member_type=?,email=?,phone=?,programme=?,level=?,status=coalesce(?,status),updated_at=now() where id=?";
+        when(jdbc.update(eq(update), eq("S-101"), eq("Ama"), eq("Mensah"), eq("STUDENT"),
+                eq("ama@example.edu"), eq(null), eq("Computer Science"), eq("Level 300"), eq("ACTIVE"), eq(id)))
+                .thenReturn(1);
 
-        repository.create(new MemberRequest("S-101", "Ama", "Mensah", "STUDENT", "ama@example.edu",
+        repository.update(id, new MemberRequest("S-101", "Ama", "Mensah", "STUDENT", "ama@example.edu",
                 null, "ACTIVE", "Computer Science", "Level 300"));
 
-        verify(jdbc).queryForObject(eq(insert), eq(UUID.class), eq("S-101"), eq("Ama"), eq("Mensah"), eq("STUDENT"),
-                eq("ama@example.edu"), eq(null), eq("Computer Science"), eq("Level 300"), eq("ACTIVE"));
+        verify(jdbc).update(eq(update), eq("S-101"), eq("Ama"), eq("Mensah"), eq("STUDENT"),
+                eq("ama@example.edu"), eq(null), eq("Computer Science"), eq("Level 300"), eq("ACTIVE"), eq(id));
     }
 }

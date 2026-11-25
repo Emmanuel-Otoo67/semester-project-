@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, LibraryBig } from 'lucide-react';
+import type { StudentSignupDetails } from '../auth/StudentSignupDetails';
 
 export type AccountMode = 'sign-in' | 'create-account' | 'forgot-password' | 'reset-password';
 
@@ -13,9 +14,7 @@ type AccountPageProps = {
   sessionPresent?: boolean;
   onRetry?: () => Promise<void>;
   onSignOut?: () => Promise<void>;
-  hasSession?: boolean;
-  onCreateStudent?: (indexNumber: string, email: string, password: string) => Promise<'confirmation' | 'ready'>;
-  onCompleteStudent?: (indexNumber: string) => Promise<void>;
+  onCreateStudent?: (details: StudentSignupDetails, email: string, password: string) => Promise<'confirmation' | 'ready'>;
 };
 
 const titleByMode: Record<AccountMode, string> = {
@@ -25,9 +24,13 @@ const titleByMode: Record<AccountMode, string> = {
   'reset-password': 'Reset password',
 };
 
-export default function AccountPage({ mode, localDemo, onSignIn, authError, signInDisabled, sessionPresent, onRetry, onSignOut, hasSession, onCreateStudent, onCompleteStudent }: AccountPageProps) {
+export default function AccountPage({ mode, localDemo, onSignIn, authError, signInDisabled, sessionPresent, onRetry, onSignOut, onCreateStudent }: AccountPageProps) {
   const navigate = useNavigate();
   const [indexNumber, setIndexNumber] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [programme, setProgramme] = useState('');
+  const [level, setLevel] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -44,15 +47,19 @@ export default function AccountPage({ mode, localDemo, onSignIn, authError, sign
   function validate() {
     const next: Record<string, string> = {};
     if (mode === 'create-account' && !indexNumber.trim()) next.indexNumber = 'Enter your student index number.';
-    if (asksEmail && !(mode === 'create-account' && hasSession)) {
+    if (mode === 'create-account' && !firstName.trim()) next.firstName = 'Enter your first name.';
+    if (mode === 'create-account' && !lastName.trim()) next.lastName = 'Enter your last name.';
+    if (mode === 'create-account' && !programme.trim()) next.programme = 'Enter your programme or department.';
+    if (mode === 'create-account' && !level.trim()) next.level = 'Enter your level or year.';
+    if (asksEmail) {
       if (!email.trim()) next.email = 'Enter your email address.';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = 'Enter a valid email address.';
     }
-    if (asksPassword && !(mode === 'create-account' && hasSession)) {
+    if (asksPassword) {
       if (!password) next.password = 'Enter your password.';
       else if (isNewPassword && password.length < 8) next.password = 'Use at least 8 characters.';
     }
-    if (asksConfirmation && !(mode === 'create-account' && hasSession)) {
+    if (asksConfirmation) {
       if (!confirmation) next.confirmation = 'Confirm your password.';
       else if (password !== confirmation) next.confirmation = 'Passwords do not match.';
     }
@@ -91,22 +98,15 @@ export default function AccountPage({ mode, localDemo, onSignIn, authError, sign
 
     if (mode === 'create-account') {
       if (localDemo) navigate('/dashboard');
-      else if (hasSession) {
-        if (!onCompleteStudent) { setFeedback({ kind: 'error', text: 'Student account linking is unavailable. Try again later.' }); return; }
-        setSubmitting(true);
-        try { await onCompleteStudent(indexNumber.trim()); setFeedback({ kind: 'success', text: 'Student account linked. You can now open the student portal.' }); }
-        catch (cause) { setFeedback({ kind: 'error', text: cause instanceof Error ? cause.message : 'Could not link this student account.' }); }
-        finally { setSubmitting(false); }
-      } else {
+      else {
         if (!onCreateStudent) { setFeedback({ kind: 'error', text: 'Student account creation is not configured. Try again later.' }); return; }
         setSubmitting(true);
         try {
-          const result = await onCreateStudent(indexNumber.trim(), email.trim(), password);
+          const result = await onCreateStudent({ indexNumber: indexNumber.trim(), firstName: firstName.trim(), lastName: lastName.trim(), programme: programme.trim(), level: level.trim() }, email.trim(), password);
           setPassword(''); setConfirmation('');
-          setFeedback({ kind: 'success', text: result === 'confirmation'
-            ? 'Account created. Check your email, confirm the address, then sign in here to finish linking your student record.'
-            : 'Student account is ready. Sign in to open your student portal.' });
-        } catch (cause) { setFeedback({ kind: 'error', text: cause instanceof Error ? cause.message : 'Could not create the student account.' }); }
+          if (result === 'ready') navigate('/student');
+          else setFeedback({ kind: 'success', text: 'Your account was created. Check your email, then sign in to continue.' });
+        } catch (cause) { setFeedback({ kind: 'error', text: cause instanceof Error ? cause.message : 'Could not create your student account. Check your details and try again.' }); }
         finally { setSubmitting(false); }
       }
       return;
@@ -144,32 +144,48 @@ export default function AccountPage({ mode, localDemo, onSignIn, authError, sign
         <p className="account-intro">{mode === 'sign-in'
           ? 'Sign in to continue to your library workspace.'
           : mode === 'create-account'
-            ? hasSession ? 'Finish linking your sign-in to your student record.' : 'Use the student index number and email on your registered student record.'
+            ? 'Enter your student details and create a password. LibTrack creates your account and student profile together, then opens your dashboard.'
             : mode === 'forgot-password'
               ? 'Enter your email to preview the password recovery step.'
               : 'Choose a new password to preview the reset step.'}</p>
 
         {localDemo && <div className="account-demo-note" role="note"><span className="demo-note-dot" /><span><strong>Local demo</strong> · Your details are not saved and no account is created.</span></div>}
-        {!localDemo && mode === 'create-account' && !hasSession && <div className="account-demo-note" role="note"><span className="demo-note-dot" /><span><strong>Student accounts only</strong> · Staff accounts are created by LibTrack administrators.</span></div>}
+        {!localDemo && mode === 'create-account' && <div className="account-demo-note" role="note"><span className="demo-note-dot" /><span><strong>One signup, one step</strong> · Your student profile is saved to the library members list automatically.</span></div>}
         {!localDemo && (mode === 'forgot-password' || mode === 'reset-password') && <div className="account-demo-note" role="note"><span className="demo-note-dot" /><span><strong>Preview only</strong> · This account action is not connected.</span></div>}
-        {authError && <div className="account-feedback error" role="alert"><span>{authError}</span>{sessionPresent && <div className="account-auth-actions"><button type="button" onClick={() => void onRetry?.()}>Check again</button><button type="button" onClick={() => void onSignOut?.()}>Sign out and use another account</button></div>}</div>}
+        {authError && <div className="account-feedback error" role="alert"><span>{authError}</span>{sessionPresent && <div className="account-auth-actions">{/(not linked|profile not found|profile yet)/i.test(authError) && <Link to="/create-account">Complete student signup</Link>}<button type="button" onClick={() => void onRetry?.()}>Check again</button><button type="button" onClick={() => void onSignOut?.()}>Sign out and use another account</button></div>}</div>}
 
         <form className="account-form" aria-label={title} onSubmit={submit} noValidate>
           {mode === 'create-account' && <Field id="account-index-number" label="Student index number" error={errors.indexNumber}>
             <input id="account-index-number" name="indexNumber" autoComplete="off" value={indexNumber} onChange={event => setIndexNumber(event.target.value)} placeholder="Enter your student index number" aria-invalid={Boolean(errors.indexNumber)} aria-describedby={errors.indexNumber ? 'account-index-number-error' : undefined} required />
           </Field>}
 
-          {asksEmail && !(mode === 'create-account' && hasSession) && <Field id="account-email" label="Email address" error={errors.email}>
+          {mode === 'create-account' && <Field id="account-first-name" label="First name" error={errors.firstName}>
+            <input id="account-first-name" name="firstName" autoComplete="given-name" value={firstName} onChange={event => setFirstName(event.target.value)} required />
+          </Field>}
+
+          {mode === 'create-account' && <Field id="account-last-name" label="Last name" error={errors.lastName}>
+            <input id="account-last-name" name="lastName" autoComplete="family-name" value={lastName} onChange={event => setLastName(event.target.value)} required />
+          </Field>}
+
+          {mode === 'create-account' && <Field id="account-programme" label="Programme / department" error={errors.programme}>
+            <input id="account-programme" name="programme" value={programme} onChange={event => setProgramme(event.target.value)} required />
+          </Field>}
+
+          {mode === 'create-account' && <Field id="account-level" label="Level / year" error={errors.level}>
+            <input id="account-level" name="level" value={level} onChange={event => setLevel(event.target.value)} required />
+          </Field>}
+
+          {asksEmail && <Field id="account-email" label="Email address" error={errors.email}>
             <input id="account-email" name="email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@library.org" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? 'account-email-error' : undefined} required />
           </Field>}
 
-          {asksPassword && !(mode === 'create-account' && hasSession) && <Field id="account-password" label="Password" error={errors.password}>
+          {asksPassword && <Field id="account-password" label="Password" error={errors.password}>
             <span className="account-password-wrap"><input id="account-password" name="password" type={passwordType} autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} value={password} onChange={event => setPassword(event.target.value)} aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? 'account-password-error' : undefined} required />
               <button type="button" className="password-visibility" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
             </span>
           </Field>}
 
-          {asksConfirmation && !(mode === 'create-account' && hasSession) && <Field id="account-confirmation" label="Confirm password" error={errors.confirmation}>
+          {asksConfirmation && <Field id="account-confirmation" label="Confirm password" error={errors.confirmation}>
             <input id="account-confirmation" name="confirmation" type={passwordType} autoComplete="new-password" value={confirmation} onChange={event => setConfirmation(event.target.value)} aria-invalid={Boolean(errors.confirmation)} aria-describedby={errors.confirmation ? 'account-confirmation-error' : undefined} required />
           </Field>}
 
@@ -177,7 +193,7 @@ export default function AccountPage({ mode, localDemo, onSignIn, authError, sign
           {feedback && <p className={`account-feedback ${feedback.kind}`} role={feedback.kind === 'error' ? 'alert' : 'status'}>{feedback.text}</p>}
 
           <button className="account-submit" type="submit" disabled={submitting || (mode === 'sign-in' && signInDisabled)}>
-            {submitting ? (mode === 'sign-in' ? 'Signing in…' : 'Please wait…') : mode === 'sign-in' ? 'Continue' : mode === 'create-account' ? hasSession ? 'Link student record' : 'Create student account' : mode === 'forgot-password' ? 'Preview reset step' : 'Preview password reset'}
+            {submitting ? (mode === 'sign-in' ? 'Signing in…' : 'Please wait…') : mode === 'sign-in' ? 'Continue' : mode === 'create-account' ? 'Create account and open dashboard' : mode === 'forgot-password' ? 'Preview reset step' : 'Preview password reset'}
             {!submitting && <ArrowRight size={17} />}
           </button>
         </form>

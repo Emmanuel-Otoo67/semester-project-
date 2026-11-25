@@ -16,7 +16,7 @@ LibTrack is a two-portal library management system with an admin/librarian works
 - Spring validates Supabase JWT issuer, audience, signature, and time claims. Configure `SUPABASE_AUTH_JWT_MODE=JWKS` for asymmetric project signing. Legacy `HS256` tokens are checked server-to-server through Supabase Auth `/user`; no shared JWT signing secret is copied into LibTrack.
 - Staff API access resolves each authenticated subject through `public.staff_users`. Inactive or unlinked users are denied on protected staff routes. Staff roles come from the database.
 - Active student accounts resolve through `members.auth_user_id`; the session role is determined from that database link, never from user-supplied JWT metadata. Students can view their profile, catalogue, borrowing history, attendance history, and personal QR code.
-- Students create their own Supabase Auth account from **Create an account** using the library number and email already on their active student record. They must confirm that email. The API verifies the confirmation with Supabase Auth and links the account only when both roster details match. Staff accounts cannot use this public signup; administrators provision staff separately. Passwords stay in Supabase Auth.
+- Students create their own account with their name, student index number, programme, level, email, and password. LibTrack creates the student profile and Supabase login together; the new student appears automatically in **Library members** and enters the student dashboard. Staff accounts are managed separately. Passwords stay in Supabase Auth.
 - Librarians can record arrival/departure manually from **Library attendance**, or use **Entrance kiosk** to scan a student's QR UUID or enter their library number. The kiosk shows generic confirmation only. Repeated camera reads of a code are suppressed, and the API also rejects a repeated scan idempotency key.
 - Library reports use live attendance, checkout, return, overdue, and copy records, support date filters, and export report tables to CSV. The dashboard includes registered student, currently inside, and today's visit counts.
 - Supabase PostgreSQL migrations, separate application and Flyway credentials, API health, live dashboard, catalogue and member search, pagination, create/edit APIs, and audit events.
@@ -71,7 +71,7 @@ SUPABASE_FLYWAY_DB_PASSWORD=<migration password>
 SUPABASE_AUTH_ISSUER_URI=https://<project-ref>.supabase.co/auth/v1
 SUPABASE_AUTH_AUDIENCE=authenticated
 SUPABASE_AUTH_JWT_MODE=JWKS
-SUPABASE_AUTH_PUBLISHABLE_KEY=<Supabase publishable key used to verify confirmed student emails>
+SUPABASE_AUTH_PUBLISHABLE_KEY=<Supabase publishable key required only for legacy HS256 validation>
 ```
 
 Use the database owner only for the separate Flyway connection. Never use the owner credentials for the API runtime. The runtime role password is a new password you create for `libtrack_runtime`; it is distinct from the project database password. The Vite app uses only the Supabase project URL and publishable key for Auth; it does not query the public database schema.
@@ -84,7 +84,7 @@ If the Supabase project still signs tokens with legacy HS256, set `SUPABASE_AUTH
 
 - `GET /api/v1/health` — public service status.
 - `GET /api/v1/session` — authenticated staff or student identity resolved from its database link.
-- `POST /api/v1/student-registration` — link the signed-in Supabase identity to one active student record after the email is confirmed and the library number and roster email match.
+- `POST /api/v1/student-registration` — create the student profile for the signed-in Supabase identity from the submitted student signup details. Existing unlinked member rows with the same student number and email are updated in place.
 - `GET /api/v1/dashboard/summary` — live circulation and catalog counts.
 - `/api/v1/catalog/books` — searchable, paginated book metadata and physical copies.
 - `/api/v1/members` — searchable, paginated member records.

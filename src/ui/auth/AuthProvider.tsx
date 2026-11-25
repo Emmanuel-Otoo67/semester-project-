@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { Session } from '@supabase/supabase-js';
 import { ApiError, apiFetch } from '../api/http';
 import { localDevelopmentMode, supabase, supabaseConfigured } from './supabase';
+import type { StudentSignupDetails } from './StudentSignupDetails';
 
 export type StaffSession = { authenticated: true; localDevelopment?: boolean; staffId: string; displayName: string; role: 'ADMIN' | 'LIBRARIAN' };
 export type StudentSession = { authenticated: true; studentId: string; libraryNumber: string; displayName: string; programme: string | null; level: string | null; email?: string | null; phone?: string | null; role: 'STUDENT' };
@@ -15,25 +16,22 @@ type AuthState = {
   configurationError: boolean;
   localDevelopment: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  createStudentAccount: (indexNumber: string, email: string, password: string) => Promise<'confirmation' | 'ready'>;
-  completeStudentAccount: (indexNumber: string) => Promise<void>;
+  createStudentAccount: (details: StudentSignupDetails, email: string, password: string) => Promise<'confirmation' | 'ready'>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
-const pendingStudentLibraryNumberKey = 'libtrack.pendingStudentLibraryNumber';
-
-async function linkStudentAccount(indexNumber: string, current: Session) {
-  try {
-    await apiFetch('/api/v1/student-registration', {
-      method: 'POST', body: JSON.stringify({ libraryNumber: indexNumber }),
-    }, current.access_token);
-    window.sessionStorage.removeItem(pendingStudentLibraryNumberKey);
-  } catch (error) {
-    window.sessionStorage.removeItem(pendingStudentLibraryNumberKey);
-    throw error;
-  }
+async function createStudentProfile(details: StudentSignupDetails, current: Session) {
+  await apiFetch('/api/v1/student-registration', {
+    method: 'POST', body: JSON.stringify({
+      libraryNumber: details.indexNumber,
+      firstName: details.firstName,
+      lastName: details.lastName,
+      programme: details.programme,
+      level: details.level,
+    }),
+  }, current.access_token);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -64,8 +62,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (!current) { setStaff(null); setStudent(null); setError(null); return null; }
     try {
-      const pendingIndexNumber = window.sessionStorage.getItem(pendingStudentLibraryNumberKey);
-      if (pendingIndexNumber) await linkStudentAccount(pendingIndexNumber, current);
       const identity = await apiFetch<IdentitySession>('/api/v1/session', {}, current.access_token);
       if (identity.role === 'STUDENT') { setStudent(identity); setStaff(null); }
       else { setStaff(identity); setStudent(null); }
@@ -126,41 +122,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (signInError) throw new Error('Email or password was not accepted.');
     setSession(data.session);
-    const pendingIndexNumber = window.sessionStorage.getItem(pendingStudentLibraryNumberKey);
-    if (pendingIndexNumber && data.session) await linkStudentAccount(pendingIndexNumber, data.session);
     const role = await resolveStaff(data.session);
-    if (!role) throw new Error('You signed in, but this login is not linked to an active LibTrack account. Students can choose “Create an account” to link their library record.');
+    if (!role) throw new Error('This login is not linked to a student profile yet. Students can complete the signup form to open their dashboard.');
   }, [resolveStaff]);
 
-  const completeStudentAccount = useCallback(async (indexNumber: string) => {
-    if (localDevelopmentMode || !supabase) throw new Error('Student account registration is not available in local demo mode.');
-    const { data, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !data.session) throw new Error('Sign in with the student email first, then complete registration.');
-    const normalized = indexNumber.trim();
-    window.sessionStorage.setItem(pendingStudentLibraryNumberKey, normalized);
-    await linkStudentAccount(normalized, data.session);
-    const role = await resolveStaff(data.session);
-    if (role !== 'STUDENT') throw new Error('The account is signed in, but LibTrack did not find a matching student record. Check your student index number and registered email.');
-  }, [resolveStaff]);
-
-  const createStudentAccount = useCallback(async (indexNumber: string, email: string, password: string) => {
+  const createStudentAccount = useCallback(async (details: StudentSignupDetails, email: string, password: string) => {
     if (localDevelopmentMode) throw new Error('Student signup is only available when Supabase authentication is enabled.');
     if (!supabase) throw new Error('Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to enable student signup.');
-    const normalized = indexNumber.trim();
-    window.sessionStorage.setItem(pendingStudentLibraryNumberKey, normalized);
+    const normalizedEmail = email.trim();
+    const { data: existing, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw new Error('Your current sign-in could not be checked. Refresh the page and try again.');
+    if (existing.session) {
+      const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+      if (signOutError) throw new Error('Could not reset the earlier sign-in. Refresh the page and try again.');
+      setSession(null); setStaff(null); setStudent(null);
+    }
+
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email: email.trim(), password,
+      email: normalizedEmail, password,
       options: { emailRedirectTo: `${window.location.origin}/create-account?confirmed=1` },
     });
-    if (signUpError) {
-      window.sessionStorage.removeItem(pendingStudentLibraryNumberKey);
+    let current = data.session;
+    if (signUpError && /already registered|already exists/i.test(signUpError.message)) {
+      const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+      if (signInError) throw new Error('This email already has an account. The password entered could not sign in to it.');
+      current = signedIn.session;
+    } else if (signUpError) {
       throw new Error(signUpError.message);
     }
-    if (!data.session) return 'confirmation';
-    setSession(data.session);
-    await linkStudentAccount(normalized, data.session);
-    const role = await resolveStaff(data.session);
-    if (role !== 'STUDENT') throw new Error('The account was created, but LibTrack could not link it to a student record. Check the student index number and registered email, then retry.');
+    if (!current) {
+      const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+      if (signInError || !signedIn.session) return 'confirmation';
+      current = signedIn.session;
+    }
+
+    setSession(current);
+    await createStudentProfile(details, current);
+    const role = await resolveStaff(current);
+    if (role !== 'STUDENT') throw new Error('Your profile could not be saved. Check the index number and try again.');
     return 'ready';
   }, [resolveStaff]);
 
@@ -171,8 +170,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({ loading, session, staff, student, error,
     configurationError: !localDevelopmentMode && !supabaseConfigured,
-    localDevelopment: localDevelopmentMode, signIn, createStudentAccount, completeStudentAccount, signOut, refresh }),
-    [loading, session, staff, student, error, signIn, createStudentAccount, completeStudentAccount, signOut, refresh]);
+    localDevelopment: localDevelopmentMode, signIn, createStudentAccount, signOut, refresh }),
+    [loading, session, staff, student, error, signIn, createStudentAccount, signOut, refresh]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

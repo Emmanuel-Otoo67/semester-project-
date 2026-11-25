@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Locale;
 
 @Repository
 public class StudentIdentityRepository {
@@ -26,15 +27,29 @@ public class StudentIdentityRepository {
                 rs.getString("email"), rs.getString("phone"))) : Optional.empty(), authUserId);
     }
 
-    public boolean linkByVerifiedEmail(String libraryNumber, String verifiedEmail, UUID authUserId) {
-        return jdbc.update("""
-                update public.members
-                   set auth_user_id=?, updated_at=now()
-                 where lower(btrim(library_number))=lower(btrim(?))
-                   and lower(btrim(email))=lower(btrim(?))
-                   and member_type='STUDENT' and status='ACTIVE'
-                   and (auth_user_id is null or auth_user_id=?)
-                   and not exists (select 1 from public.staff_users where auth_user_id=?)
-                """, authUserId, libraryNumber, verifiedEmail, authUserId, authUserId) == 1;
+    public boolean registerStudent(StudentAccountRegistrationRequest request, String accountEmail, UUID authUserId) {
+        String indexNumber = request.libraryNumber().trim().toUpperCase(Locale.ROOT);
+        return !jdbc.query("""
+                insert into public.members as member
+                    (library_number,first_name,last_name,member_type,email,programme,level,status,auth_user_id)
+                select ?,?,?, 'STUDENT',?,?,?, 'ACTIVE',?
+                 where not exists (select 1 from public.staff_users where auth_user_id=?)
+                on conflict do update
+                   set auth_user_id=excluded.auth_user_id,
+                       first_name=excluded.first_name,
+                       last_name=excluded.last_name,
+                       email=excluded.email,
+                       programme=excluded.programme,
+                       level=excluded.level,
+                       updated_at=now()
+                 where member.member_type='STUDENT'
+                   and member.status='ACTIVE'
+                   and lower(btrim(member.library_number))=lower(btrim(excluded.library_number))
+                   and (member.email is null or lower(btrim(member.email))=lower(btrim(excluded.email)))
+                   and (member.auth_user_id is null or member.auth_user_id=excluded.auth_user_id)
+                returning id
+                """, (rs, row) -> rs.getObject("id", UUID.class), indexNumber,
+                request.firstName().trim(), request.lastName().trim(), accountEmail,
+                request.programme().trim(), request.level().trim(), authUserId, authUserId).isEmpty();
     }
 }

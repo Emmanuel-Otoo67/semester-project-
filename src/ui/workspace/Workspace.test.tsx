@@ -33,22 +33,12 @@ describe('LibTrack librarian attendance and student setup', () => {
     vi.unstubAllGlobals();
   });
 
-  it('collects programme and level when registering a student', async () => {
+  it('shows members created through student signup without an admin add-member action', async () => {
     renderWorkspace();
     fireEvent.click(await screen.findByRole('button', { name: 'Library members' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Add member' }));
-
-    fireEvent.change(screen.getByLabelText('Library number'), { target: { value: 'S-101' } });
-    fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Ama' } });
-    fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Mensah' } });
-    fireEvent.change(screen.getByLabelText('Programme / department'), { target: { value: 'Computer Science' } });
-    fireEvent.change(screen.getByLabelText('Level / year'), { target: { value: 'Level 300' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save member' }));
-
-    await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith('/api/v1/members')
-      && init?.method === 'POST' && String(init.body).includes('"programme":"Computer Science"'))).toBe(true));
-    const createCall = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/api/v1/members') && init?.method === 'POST');
-    expect(JSON.parse(String(createCall?.[1]?.body)).level).toBe('Level 300');
+    expect(await screen.findByText(/students create their accounts from the sign-up page/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add student record' })).toBeNull();
+    expect(screen.queryByText('Awaiting signup')).toBeNull();
   });
 
   it('opens the attendance page with current presence and visit history sections', async () => {

@@ -22,12 +22,11 @@ function SignInRoute() {
 }
 
 function StudentRegistrationRoute() {
-  const { loading, session, staff, student, createStudentAccount, completeStudentAccount } = useAuth();
+  const { loading, session, staff, student, createStudentAccount } = useAuth();
   if (loading) return <main className="auth-shell"><div className="auth-card auth-loading"><LoaderCircle className="spin" /><span>Checking your LibTrack session…</span></div></main>;
   if (staff && session) return <Navigate to="/dashboard" replace />;
   if (student && session) return <Navigate to="/student" replace />;
-  return <AccountPage mode="create-account" localDemo={false} hasSession={Boolean(session)}
-    onCreateStudent={createStudentAccount} onCompleteStudent={completeStudentAccount} />;
+  return <AccountPage mode="create-account" localDemo={false} onCreateStudent={createStudentAccount} />;
 }
 
 function DashboardRoute() {

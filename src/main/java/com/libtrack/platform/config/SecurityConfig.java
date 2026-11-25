@@ -99,6 +99,8 @@ public class SecurityConfig {
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             if (request.getRequestURI().startsWith("/api/v1/student/")) {
                 response.getWriter().write("{\"title\":\"Student access required\",\"status\":403,\"detail\":\"This Supabase account is not linked to an active LibTrack student.\"}");
+            } else if (request.getRequestURI().equals("/api/v1/session")) {
+                response.getWriter().write("{\"title\":\"LibTrack profile not found\",\"status\":403,\"detail\":\"This account does not have a LibTrack profile yet. Students can create their account and profile together from the student signup form.\"}");
             } else {
                 response.getWriter().write("{\"title\":\"Staff access required\",\"status\":403,\"detail\":\"This Supabase account is not linked to an active LibTrack staff account.\"}");
             }

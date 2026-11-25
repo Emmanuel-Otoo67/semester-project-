@@ -22,7 +22,7 @@ public class StudentAccountRegistrationController {
     @PostMapping
     public Map<String, String> register(@Valid @RequestBody StudentAccountRegistrationRequest request,
                                         @AuthenticationPrincipal Jwt jwt) {
-        registration.register(request.libraryNumber(), jwt);
-        return Map.of("status", "linked", "message", "Student account is ready. Sign in to open the student portal.");
+        registration.register(request, jwt);
+        return Map.of("status", "created", "message", "Student account and profile are ready.");
     }
 }

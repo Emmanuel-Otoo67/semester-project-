@@ -61,7 +61,7 @@ class SessionAuthorizationTest {
 
         mvc.perform(get("/api/v1/session").with(jwt().jwt(token -> token.subject(authId.toString()))))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.detail").value("This Supabase account is not linked to an active LibTrack staff account."));
+                .andExpect(jsonPath("$.detail").value("This account does not have a LibTrack profile yet. Students can create their account and profile together from the student signup form."));
     }
 
     @Test

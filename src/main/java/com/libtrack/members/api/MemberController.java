@@ -4,7 +4,6 @@ import com.libtrack.members.service.MemberService;
 import com.libtrack.platform.api.PageResult;
 import com.libtrack.platform.auth.StaffIdentityService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
@@ -17,7 +16,5 @@ public class MemberController {
     public MemberController(MemberService service,StaffIdentityService identities){this.service=service;this.identities=identities;}
     @GetMapping public PageResult<MemberRecord> list(@RequestParam(defaultValue="") String query,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="25") int size){return service.list(query,page,size);}
     @GetMapping("/{id}") public MemberRecord get(@PathVariable UUID id){return service.get(id);}
-    @PostMapping @ResponseStatus(HttpStatus.CREATED) public MemberRecord create(@Valid @RequestBody MemberRequest request,@AuthenticationPrincipal Jwt jwt){return service.create(request,identities.requireCurrentStaff(jwt).id());}
     @PutMapping("/{id}") public MemberRecord update(@PathVariable UUID id,@Valid @RequestBody MemberRequest request,@AuthenticationPrincipal Jwt jwt){return service.update(id,request,identities.requireCurrentStaff(jwt).id());}
-    @PostMapping("/{id}/account-link") public MemberRecord linkStudentAccount(@PathVariable UUID id,@Valid @RequestBody StudentAccountLinkRequest request,@AuthenticationPrincipal Jwt jwt){return service.linkStudentAccount(id,request.authUserId(),identities.requireAdministrator(jwt).id());}
 }
