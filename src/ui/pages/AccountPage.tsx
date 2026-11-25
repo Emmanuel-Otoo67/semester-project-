@@ -8,7 +8,8 @@ export type AccountMode = 'sign-in' | 'create-account' | 'forgot-password' | 're
 type AccountPageProps = {
   mode: AccountMode;
   localDemo: boolean;
-  onSignIn?: (email: string, password: string) => Promise<void>;
+  onSignIn?: (email: string, password: string, audience: 'STUDENT' | 'STAFF') => Promise<void>;
+  signInAudience?: 'STUDENT' | 'STAFF';
   authError?: string | null;
   signInDisabled?: boolean;
   sessionPresent?: boolean;
@@ -24,7 +25,7 @@ const titleByMode: Record<AccountMode, string> = {
   'reset-password': 'Reset password',
 };
 
-export default function AccountPage({ mode, localDemo, onSignIn, authError, signInDisabled, sessionPresent, onRetry, onSignOut, onCreateStudent }: AccountPageProps) {
+export default function AccountPage({ mode, localDemo, onSignIn, signInAudience = 'STUDENT', authError, signInDisabled, sessionPresent, onRetry, onSignOut, onCreateStudent }: AccountPageProps) {
   const navigate = useNavigate();
   const [indexNumber, setIndexNumber] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -38,7 +39,7 @@ export default function AccountPage({ mode, localDemo, onSignIn, authError, sign
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
-  const title = titleByMode[mode];
+  const title = mode === 'sign-in' ? `${signInAudience === 'STAFF' ? 'Staff' : 'Student'} sign in` : titleByMode[mode];
   const asksEmail = mode !== 'reset-password';
   const asksPassword = mode === 'sign-in' || mode === 'create-account' || mode === 'reset-password';
   const asksConfirmation = mode === 'create-account' || mode === 'reset-password';
@@ -85,9 +86,9 @@ export default function AccountPage({ mode, localDemo, onSignIn, authError, sign
       }
       setSubmitting(true);
       try {
-        await onSignIn(email.trim(), password);
+        await onSignIn(email.trim(), password, signInAudience);
         setPassword('');
-        navigate('/dashboard');
+        navigate(signInAudience === 'STAFF' ? '/dashboard' : '/student');
       } catch (cause) {
         setFeedback({ kind: 'error', text: cause instanceof Error ? cause.message : 'Sign-in failed. Try again.' });
       } finally {
@@ -198,8 +199,9 @@ export default function AccountPage({ mode, localDemo, onSignIn, authError, sign
           </button>
         </form>
 
-        {mode === 'sign-in' && <p className="account-switch">New to LibTrack? <Link to="/create-account">Create an account</Link></p>}
-        {mode === 'create-account' && <p className="account-switch">Already have an account? <Link to="/sign-in">Sign in</Link></p>}
+        {mode === 'sign-in' && signInAudience === 'STUDENT' && <p className="account-switch">New to LibTrack? <Link to="/create-account">Create a student account</Link></p>}
+        {mode === 'sign-in' && signInAudience === 'STAFF' && <p className="account-switch">Students can <Link to="/student/sign-in">sign in here</Link>. Staff accounts are created by library management.</p>}
+        {mode === 'create-account' && <p className="account-switch">Already have an account? <Link to="/student/sign-in">Student sign in</Link></p>}
         {mode === 'forgot-password' && <p className="account-switch"><Link to="/sign-in">Back to sign in</Link></p>}
         {mode === 'reset-password' && <p className="account-switch"><Link to="/sign-in">Back to sign in</Link><span> · </span><Link to="/forgot-password">Forgot password?</Link></p>}
       </section>

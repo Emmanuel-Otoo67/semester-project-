@@ -188,7 +188,7 @@ describe('LibTrack account screens', () => {
 
     submitForm('Sign in to your library');
 
-    expect(signIn).toHaveBeenCalledWith('jordan@example.test', 'existing-password');
+    expect(signIn).toHaveBeenCalledWith('jordan@example.test', 'existing-password', 'STUDENT');
     await waitFor(() => expect(screen.getByTestId('current-route').textContent).toBe('/dashboard'));
     expect(await screen.findByRole('heading', { name: 'Library overview' })).toBeTruthy();
   });

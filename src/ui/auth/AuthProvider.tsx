@@ -14,17 +14,17 @@ type AuthState = {
   error: string | null;
   configurationError: boolean;
   localDevelopment: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, audience: 'STUDENT' | 'STAFF') => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children, restoreSessionOnMount = true }: { children: ReactNode; restoreSessionOnMount?: boolean }) {
   const [session, setSession] = useState<Session | null>(null);
   const [staff, setStaff] = useState<StaffSession | null>(null);
   const [student, setStudent] = useState<StudentSession | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(restoreSessionOnMount);
   const [error, setError] = useState<string | null>(null);
 
   const resolveStaff = useCallback(async (current: Session | null) => {
@@ -77,6 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [resolveStaff]);
 
   useEffect(() => {
+    if (!restoreSessionOnMount) {
+      setLoading(false);
+      return;
+    }
     if (localDevelopmentMode) {
       let alive = true;
       void resolveStaff(null).finally(() => { if (alive) setLoading(false); });
@@ -99,9 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleUnauthorized = () => { void supabase?.auth.signOut(); };
     window.addEventListener('libtrack:unauthorized', handleUnauthorized);
     return () => { alive = false; listener.subscription.unsubscribe(); window.removeEventListener('libtrack:unauthorized', handleUnauthorized); };
-  }, [resolveStaff]);
+  }, [restoreSessionOnMount, resolveStaff]);
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string, audience: 'STUDENT' | 'STAFF') => {
     if (localDevelopmentMode) throw new Error('Sign-in is disabled in local development mode.');
     if (!supabase) throw new Error('Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to enable sign-in.');
     setError(null);
@@ -109,7 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (signInError) throw new Error('Email or password was not accepted.');
     setSession(data.session);
     const role = await resolveStaff(data.session);
-    if (!role) throw new Error('This login is not linked to a student profile yet. Students can complete the signup form to open their dashboard.');
+    if (!role) throw new Error('This account does not have an active LibTrack profile. Students can create their account from Student sign in.');
+    if (role !== audience) {
+      throw new Error(role === 'STUDENT'
+        ? 'This is a student account. Choose Student sign in.'
+        : 'This is a staff account. Choose Staff sign in.');
+    }
   }, [resolveStaff]);
 
   const signOut = useCallback(async () => {

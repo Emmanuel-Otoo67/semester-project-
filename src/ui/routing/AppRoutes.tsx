@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { ArrowRight, LibraryBig, LoaderCircle } from 'lucide-react';
 import { AuthProvider, useAuth } from '../auth/AuthProvider';
 import { StudentSignupProvider, useStudentSignup } from '../auth/StudentSignupProvider';
@@ -11,15 +11,24 @@ const KioskPage = lazy(() => import('../portal/KioskPage').then(module => ({ def
 
 const localDemoMode = import.meta.env.VITE_LIBTRACK_LOCAL_DEV === 'true';
 
-function SignInRoute() {
-  const { loading, session, staff, student, error, configurationError, signIn, refresh, signOut } = useAuth();
+function SignInChoiceRoute() {
+  return <main className="auth-shell"><section className="auth-card">
+    <div className="auth-brand"><span className="auth-brand-mark"><LibraryBig size={22} /></span><span>libtrack<span className="brand-dot">.</span></span></div>
+    <p className="auth-kicker">WELCOME BACK</p><h1>Choose your portal</h1>
+    <p className="auth-copy">Students and library staff use separate sign-in pages.</p>
+    <Link className="auth-primary" to="/student/sign-in">Student sign in <ArrowRight size={17} /></Link>
+    <Link className="auth-secondary" to="/staff/sign-in">Staff sign in <ArrowRight size={17} /></Link>
+    <p className="account-switch">New student? <Link to="/create-account">Create a student account</Link></p>
+  </section></main>;
+}
+
+function SignInRoute({ audience }: { audience: 'STUDENT' | 'STAFF' }) {
+  const { loading, error, configurationError, signIn } = useAuth();
   if (loading) return <main className="auth-shell"><div className="auth-card auth-loading"><LoaderCircle className="spin" /><span>Checking your LibTrack session…</span></div></main>;
-  if (student && session) return <Navigate to="/student" replace />;
-  if (staff && session) return <Navigate to="/dashboard" replace />;
   const authError = configurationError
     ? 'Sign-in is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY for this environment.'
     : error;
-  return <AccountPage mode="sign-in" localDemo={false} onSignIn={signIn} authError={authError} signInDisabled={configurationError} sessionPresent={Boolean(session)} onRetry={refresh} onSignOut={signOut} />;
+  return <AccountPage mode="sign-in" localDemo={false} signInAudience={audience} onSignIn={signIn} authError={authError} signInDisabled={configurationError} />;
 }
 
 function StudentRegistrationRoute() {
@@ -61,18 +70,20 @@ function KioskRoute() {
   return <Suspense fallback={<WorkspaceLoading />}><KioskPage token={session?.access_token} staffName={staff.displayName} signOut={signOut} /></Suspense>;
 }
 
-function WithAuth({ children }: { children: ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+function WithAuth({ children, restoreSessionOnMount = true }: { children: ReactNode; restoreSessionOnMount?: boolean }) {
+  return <AuthProvider restoreSessionOnMount={restoreSessionOnMount}>{children}</AuthProvider>;
 }
 
 export default function AppRoutes() {
-  const signInPage = localDemoMode
-    ? <AccountPage mode="sign-in" localDemo />
-    : <WithAuth><SignInRoute /></WithAuth>;
-
   return <Routes>
     <Route path="/" element={<HomePage />} />
-    <Route path="/sign-in" element={signInPage} />
+    <Route path="/sign-in" element={localDemoMode ? <AccountPage mode="sign-in" localDemo /> : <SignInChoiceRoute />} />
+    <Route path="/student/sign-in" element={localDemoMode
+      ? <Navigate to="/sign-in" replace />
+      : <WithAuth restoreSessionOnMount={false}><SignInRoute audience="STUDENT" /></WithAuth>} />
+    <Route path="/staff/sign-in" element={localDemoMode
+      ? <Navigate to="/sign-in" replace />
+      : <WithAuth restoreSessionOnMount={false}><SignInRoute audience="STAFF" /></WithAuth>} />
     <Route path="/create-account" element={localDemoMode
       ? <AccountPage mode="create-account" localDemo />
       : <StudentSignupProvider><StudentRegistrationRoute /></StudentSignupProvider>} />
