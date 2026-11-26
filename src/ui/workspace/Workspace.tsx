@@ -3,7 +3,7 @@ import { ArrowLeftRight, BarChart3, BookOpen, Bookmark, CalendarDays, DoorOpen, 
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { apiFetch } from '../api/http';
-import { NotificationPlaceholder } from '../components/NotificationPlaceholder';
+import { WorkspaceNotifications } from '../components/NotificationPlaceholder';
 import { BrandLogo } from '../components/BrandLogo';
 
 type Page<T> = { items: T[]; page: number; size: number; total: number };
@@ -132,7 +132,7 @@ export function Workspace({ staff, token, localDevelopment, signOut }: { staff: 
       {(['overview','members','attendance','catalog','loans','holds','reports',...(staff.role==='ADMIN'?['staff','settings','audit']:[])] as View[]).map((item) => { const Icon = viewIcons[item]; return <button key={item} aria-label={title[item]} title={title[item]} className={`workspace-nav-item ${view===item?'selected':''}`} onClick={() => {setView(item);setQuery('');setVisitFrom('');setVisitTo('');}}><Icon size={19} strokeWidth={1.8} aria-hidden="true"/><span className="workspace-nav-text">{title[item]}</span></button>; })}
       <div className="workspace-account"><div className="workspace-account-avatar" aria-hidden="true">{staff.displayName.trim().slice(0,1).toUpperCase()}</div><div className="workspace-account-copy"><strong>{staff.displayName}</strong><small>{staff.role}</small></div>{!localDevelopment&&<button title="Sign out" aria-label="Sign out" onClick={() => void signOut()}><LogOut size={16}/></button>}</div>
     </aside>
-    <main className="workspace-main" data-view={view}><header className="workspace-header"><div><h1>{title[view]}</h1><p className="workspace-view-description">{description[view]}</p></div><div className="workspace-header-actions"><NotificationPlaceholder/>{localDevelopment&&<span className="local-dev-badge">LOCAL DEVELOPMENT</span>}<button className="workspace-refresh" onClick={() => void load()} disabled={loading}><RefreshCw size={15} aria-hidden="true"/>Refresh</button>{view==='catalog'&&<button className="workspace-action" onClick={() => {setEditingBook(null);setShowBookForm(true);}}><Plus size={16} aria-hidden="true"/>Add book</button>}</div></header>
+    <main className="workspace-main" data-view={view}><header className="workspace-header"><div><h1>{title[view]}</h1><p className="workspace-view-description">{description[view]}</p></div><div className="workspace-header-actions"><WorkspaceNotifications token={token} onNavigate={setView}/>{localDevelopment&&<span className="local-dev-badge">LOCAL DEVELOPMENT</span>}<button className="workspace-refresh" onClick={() => void load()} disabled={loading}><RefreshCw size={15} aria-hidden="true"/>Refresh</button>{view==='catalog'&&<button className="workspace-action" onClick={() => {setEditingBook(null);setShowBookForm(true);}}><Plus size={16} aria-hidden="true"/>Add book</button>}</div></header>
       {error&&<div className="workspace-error" role="alert">{error}</div>}
       {loading&&!loadedViews.has(view)?<PageSkeleton view={view}/>:view==='overview'?<>
         {!dashboard?<div className="workspace-empty">No dashboard data is available yet.</div>:<>
