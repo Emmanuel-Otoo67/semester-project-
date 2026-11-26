@@ -9,26 +9,32 @@ import {
   Bookmark,
   Check,
   ChevronDown,
+  CircleHelp,
+  Home,
+  Info,
   LibraryBig,
+  LogIn,
+  Mail,
   Menu,
+  BookOpen as BooksIcon,
   RefreshCw,
   UsersRound,
   X,
 } from 'lucide-react';
 
 const featureAreas = [
-  { title: 'Catalog', detail: 'Keep titles, copies, and collection details together.', icon: BookOpen },
-  { title: 'Members', detail: 'Find and maintain the records your library uses every day.', icon: UsersRound },
-  { title: 'Circulation', detail: 'Handle checkouts, renewals, and returns in one place.', icon: RefreshCw },
-  { title: 'Holds', detail: 'Follow requests as they move through the hold queue.', icon: Bookmark },
+  { title: 'Books and copies', detail: 'Add titles, record copy barcodes, edit catalogue details, and check availability.', icon: BookOpen },
+  { title: 'Student accounts', detail: 'Students sign up with their details; LibTrack creates the member profile used by staff.', icon: UsersRound },
+  { title: 'Entrance attendance', detail: 'At the kiosk, scan a student QR code or enter their index number to record arrival and departure.', icon: Check },
+  { title: 'Loans and returns', detail: 'Staff check out a copy to a student, renew a loan, and record its return and due date.', icon: RefreshCw },
 ];
 
 const navigation = [
-  ['Home', '#home'],
-  ['Features', '#features'],
-  ['About', '#about'],
-  ['FAQ', '#faq'],
-  ['Contact', '#contact'],
+  ['Home', '#home', Home],
+  ['Features', '#features', BooksIcon],
+  ['About', '#about', Info],
+  ['FAQ', '#faq', CircleHelp],
+  ['Contact', '#contact', Mail],
 ] as const;
 
 export default function HomePage() {
@@ -103,35 +109,33 @@ export default function HomePage() {
   }
 
   return <div className="site-shell">
+    <header className="site-header">
+      <Link className="site-brand" to="/" aria-label="LibTrack home" onClick={closeMenu}>
+        <BrandLogo className="brand-logo-site" />
+      </Link>
+      <button className="site-menu-toggle" type="button" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={menuOpen} aria-controls="site-navigation" onClick={() => setMenuOpen(value => !value)}>
+        {menuOpen ? <X size={21} /> : <Menu size={21} />}
+      </button>
+      <nav id="site-navigation" className={`site-navigation${menuOpen ? ' is-open' : ''}`} aria-label="Main navigation" onKeyDown={event => { if (event.key === 'Escape') closeMenu(); }}>
+        {navigation.map(([label, href, Icon]) => <a key={label} className="site-nav-link" href={href} onClick={closeMenu}><Icon size={14} strokeWidth={1.8} aria-hidden="true" /><span>{label}</span></a>)}
+        <Link className="site-sign-in" to="/sign-in" onClick={closeMenu}><LogIn size={14} aria-hidden="true" /><span>Sign in</span></Link>
+      </nav>
+    </header>
     <section className="site-hero" id="home">
       <div className="hero-glow hero-glow-one" aria-hidden="true" />
       <div className="hero-glow hero-glow-two" aria-hidden="true" />
       <div className="hero-orbit hero-orbit-one" aria-hidden="true" />
       <div className="hero-orbit hero-orbit-two" aria-hidden="true" />
       <div className="hero-parallax" ref={parallaxRef} aria-hidden="true" />
-      <header className="site-header">
-        <Link className="site-brand" to="/" aria-label="LibTrack home" onClick={closeMenu}>
-          <BrandLogo className="brand-logo-site" />
-        </Link>
-        <button className="site-menu-toggle" type="button" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={menuOpen} aria-controls="site-navigation" onClick={() => setMenuOpen(value => !value)}>
-          {menuOpen ? <X size={21} /> : <Menu size={21} />}
-        </button>
-        <nav id="site-navigation" className={`site-navigation${menuOpen ? ' is-open' : ''}`} aria-label="Main navigation" onKeyDown={event => { if (event.key === 'Escape') closeMenu(); }}>
-          {navigation.map(([label, href]) => <a key={label} className="site-nav-link" href={href} onClick={closeMenu}>{label}</a>)}
-          <Link className="site-sign-in" to="/sign-in" onClick={closeMenu}>Sign in</Link>
-        </nav>
-      </header>
-
       <div className="hero-content">
         <div className="hero-copy" data-reveal>
-          <p className="hero-eyebrow"><span className="eyebrow-line" /> Track <i>•</i> Manage <i>•</i> Stay Ahead</p>
-          <h1>Welcome to <span>LibTrack</span></h1>
-          <p className="hero-description">A clear, considered workspace for your library’s collection, members, and everyday circulation.</p>
+          <h1>From the library door to the <span>loan desk.</span></h1>
+          <p className="hero-description">LibTrack connects student accounts, entrance attendance, book checkouts, renewals, and returns in one library system.</p>
           <div className="hero-actions">
             <Link className="button button-gold" to="/create-account">Create student account <ArrowRight size={17} /></Link>
             <a className="button button-outline" href="#features">Explore features <ArrowDown size={16} /></a>
           </div>
-          <div className="hero-proof"><span><Check size={14} /> A focused library workspace</span><span className="proof-divider" /><span>Built around your daily work</span></div>
+          <div className="hero-proof"><span><Check size={14} /> Students create accounts and track their books</span><span className="proof-divider" /><span>Staff manage the collection, visits, and loans</span></div>
         </div>
 
         <div className="hero-visual" data-reveal>
@@ -144,9 +148,9 @@ export default function HomePage() {
       </div>
 
       <div className="hero-bottom-row">
-        <div className="hero-count"><strong aria-label="Current LibTrack feature areas" ref={countRef}>{featureCount}</strong><span>connected work areas</span></div>
+        <div className="hero-count"><strong aria-label="Core LibTrack workflows" ref={countRef}>{featureCount}</strong><span>core library workflows</span></div>
         <span className="bottom-rule" />
-        <p>Clear records. Steadier library workflows.</p>
+        <p>Students · books · attendance · loans</p>
         <a className="scroll-cue" href="#features" aria-label="Scroll to features"><span>Scroll to explore</span><span className="scroll-cue-icon"><ArrowDown size={14} /></span></a>
       </div>
     </section>
@@ -154,9 +158,9 @@ export default function HomePage() {
     <main>
       <section id="features" className="section section-features">
         <div className="section-heading" data-reveal>
-          <p className="section-overline">A place for the work</p>
-          <h2>Library operations, <span>made clearer.</span></h2>
-          <p>Bring the core parts of a library workspace into one calm, easy-to-follow interface.</p>
+          <p className="section-overline">LIBRARY TOOLS</p>
+          <h2>One system for the <span>daily workflow.</span></h2>
+          <p>Follow a student from account creation and library visits through book checkout and return.</p>
         </div>
         <div className="feature-grid">
           {featureAreas.map(({ title, detail, icon: Icon }, index) => <article className="feature-card" data-reveal key={title} style={{ '--reveal-order': index } as CSSProperties}>
@@ -171,41 +175,42 @@ export default function HomePage() {
 
       <section id="how-it-works" className="section section-workflow">
         <div className="workflow-heading" data-reveal>
-          <p className="section-overline">How it works</p>
-          <h2>From records to <span>ready action.</span></h2>
-          <p>A simple path through the areas staff already work with.</p>
+          <p className="section-overline">DAILY LIBRARY FLOW</p>
+          <h2>One student record. <span>Every step recorded.</span></h2>
+          <p>Here is how students and library staff use LibTrack from sign-up to return.</p>
         </div>
         <div className="workflow-steps">
-          <article className="workflow-step" data-reveal><span className="step-number">01</span><div className="step-connector"><span /></div><h3>Keep the collection in view</h3><p>Organize titles and copies, then keep member records close at hand.</p></article>
-          <article className="workflow-step" data-reveal><span className="step-number">02</span><div className="step-connector"><span /></div><h3>Move daily work forward</h3><p>Record checkouts, renewals, returns, and hold requests from the workspace.</p></article>
-          <article className="workflow-step" data-reveal><span className="step-number">03</span><div className="step-connector"><span /></div><h3>Review what changed</h3><p>Use the existing activity and policy areas to keep operations understandable.</p></article>
+          <article className="workflow-step" data-reveal><span className="step-number">01</span><div className="step-connector"><span /></div><h3>Students create accounts</h3><p>A student enters their index number, name, programme, level, email, and password. LibTrack creates their member profile with the account.</p></article>
+          <article className="workflow-step" data-reveal><span className="step-number">02</span><div className="step-connector"><span /></div><h3>Staff prepare books</h3><p>Staff add titles and copies, assign a barcode to each copy, and check which copies are available.</p></article>
+          <article className="workflow-step" data-reveal><span className="step-number">03</span><div className="step-connector"><span /></div><h3>Students record library visits</h3><p>At the entrance kiosk, a student scans their QR code or enters their index number to check in. Scanning again records checkout.</p></article>
+          <article className="workflow-step" data-reveal><span className="step-number">04</span><div className="step-connector"><span /></div><h3>Staff lend and receive books</h3><p>Staff select the student and book copy, then record checkout, renewal, or return. Students can review due dates and borrowing history in their portal.</p></article>
         </div>
       </section>
 
       <section id="about" className="section section-about">
         <div className="about-mark" data-reveal><span className="about-orbit" /><span className="about-icon"><LibraryBig size={36} /></span><span className="about-dot" /></div>
         <div className="about-copy" data-reveal>
-          <p className="section-overline">About LibTrack</p>
-          <h2>Made for the people keeping a library moving.</h2>
-          <p>LibTrack brings catalogue, member, and circulation records into a single staff workspace. Its interface is designed to make the next step easier to find and the current work easier to follow.</p>
+          <p className="section-overline">ABOUT LIBTRACK</p>
+          <h2>One library. Shared, up-to-date records.</h2>
+          <p>LibTrack gives students a place to find books, check their loans, and view library visits. Staff manage student records, the catalogue, entrance attendance, loans, returns, holds, and reports from the staff workspace.</p>
           <a href="#features" className="text-link">Explore the workspace <ArrowRight size={16} /></a>
         </div>
       </section>
 
       <section id="faq" className="section section-faq">
-        <div className="faq-intro" data-reveal><p className="section-overline">FAQ</p><h2>A few useful details.</h2><p>More product and contact information can be added as it is finalized.</p></div>
+        <div className="faq-intro" data-reveal><p className="section-overline">HELP AND ACCESS</p><h2>Using LibTrack.</h2><p>How students, staff, and the entrance kiosk fit into the library workflow.</p></div>
         <div className="faq-list" data-reveal>
           <details><summary>What can I manage in LibTrack?<ChevronDown size={17} /></summary><p>The current workspace includes the catalogue, members, loans, holds, audit log, settings, and staff areas.</p></details>
           <details><summary>How do students and staff access LibTrack?<ChevronDown size={17} /></summary><p>Students can create an account from the student sign-up page. Staff sign in with accounts created by library management.</p></details>
-          <details><summary>Where can I find contact information?<ChevronDown size={17} /></summary><p>LibTrack contact details will be added here when they are ready.</p></details>
+          <details><summary>How is a library visit recorded?<ChevronDown size={17} /></summary><p>At the entrance kiosk, students scan their personal QR code or enter their index number. A second scan records their departure.</p></details>
         </div>
       </section>
 
       <section className="final-cta" data-reveal>
         <div className="cta-glow" aria-hidden="true" />
-        <p className="section-overline">Your library workspace</p>
-        <h2>Bring the day’s work into focus.</h2>
-        <p>Explore the LibTrack interface and see how its current workspace is organized.</p>
+        <p className="section-overline">STUDENT ACCESS</p>
+        <h2>Keep your library activity close.</h2>
+        <p>Create a student account to browse the catalogue, check due dates, review your loans, and see recorded library visits.</p>
         <Link className="button button-gold" to="/create-account">Create student account <ArrowRight size={17} /></Link>
       </section>
     </main>
