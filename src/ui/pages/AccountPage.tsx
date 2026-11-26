@@ -133,15 +133,13 @@ export default function AccountPage({ mode, localDemo, onSignIn, signInAudience 
   return <div className="account-shell">
     <aside className="account-aside">
       <Link className="account-brand" to="/" aria-label="LibTrack home"><BrandLogo className="brand-logo-account" /></Link>
-      <div className="account-aside-copy"><span className="account-aside-line" /><p>Track <i>•</i> Manage <i>•</i> Stay Ahead</p><h2>A clearer way to keep your library moving.</h2><span className="account-aside-note">Your library workspace, thoughtfully arranged.</span></div>
+      <div className="account-aside-copy"><span className="account-aside-line" /><h2>Library visits and book loans, in one place.</h2><span className="account-aside-note">Students manage accounts and borrowing history. Staff manage books, attendance, checkouts, and returns.</span></div>
       <div className="account-aside-orbit account-aside-orbit-one" aria-hidden="true" /><div className="account-aside-orbit account-aside-orbit-two" aria-hidden="true" />
-      <span className="account-aside-footer">LIBTRACK · LIBRARY WORKSPACE</span>
     </aside>
     <main className="account-main">
-      <div className="account-topline"><Link to="/" className="account-home-link"><ArrowLeft size={15} /> Back to home</Link><span>LIBTRACK ACCOUNT</span></div>
+      <div className="account-topline"><Link to="/" className="account-home-link"><ArrowLeft size={15} /> Back to home</Link></div>
       <section className="account-card">
         <div className="account-mobile-brand"><BrandLogo className="brand-logo-mobile" /></div>
-        <p className="account-kicker">{mode === 'sign-in' ? 'WELCOME BACK' : mode === 'create-account' ? 'GET STARTED' : 'ACCOUNT HELP'}</p>
         <h1>{title}</h1>
         <p className="account-intro">{mode === 'sign-in'
           ? 'Sign in to continue to your library workspace.'
