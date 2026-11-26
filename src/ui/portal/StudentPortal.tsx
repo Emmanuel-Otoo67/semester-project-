@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Clock3, GraduationCap, LogOut, Search, UserRound } from 'lucide-react';
+import { BookMarked, BookOpen, Clock3, GraduationCap, LayoutDashboard, LogOut, Search, UserRound, type LucideIcon } from 'lucide-react';
 import { apiFetch } from '../api/http';
 import type { StudentSession } from '../auth/AuthProvider';
 import { QRCodeSVG } from 'qrcode.react';
@@ -10,6 +10,13 @@ type Book = { id: string; title: string; isbn: string | null; authors: string; c
 type Loan = { id: string; title: string; barcode: string; checkedOutAt: string; dueAt: string; returnedAt: string | null; renewalCount: number };
 type Visit = { id: string; checkedInAt: string; checkedOutAt: string | null };
 type View = 'overview' | 'catalog' | 'books' | 'visits' | 'profile';
+const viewIcons: Record<View, LucideIcon> = {
+  overview: LayoutDashboard,
+  catalog: Search,
+  books: BookMarked,
+  visits: Clock3,
+  profile: UserRound,
+};
 
 export function StudentPortal({ student, token, signOut }: { student: StudentSession; token: string; signOut: () => Promise<void> }) {
   const [view, setView] = useState<View>('overview');
@@ -48,9 +55,9 @@ export function StudentPortal({ student, token, signOut }: { student: StudentSes
 
   return <div className="student-shell">
     <aside className="student-sidebar">
-      <div className="student-brand"><BrandLogo className="brand-logo-sidebar" /></div>
+      <div className="student-brand"><span className="student-brand-mark" aria-hidden="true"><BookOpen size={21}/></span><BrandLogo className="brand-logo-sidebar" /></div>
       <p className="student-nav-label">STUDENT PORTAL</p>
-      {(Object.keys(titles) as View[]).map(item => <button key={item} className={`student-nav-item ${view === item ? 'selected' : ''}`} onClick={() => setView(item)}>{titles[item]}</button>)}
+      {(Object.keys(titles) as View[]).map(item => { const Icon = viewIcons[item]; return <button key={item} aria-label={titles[item]} title={titles[item]} className={`student-nav-item ${view === item ? 'selected' : ''}`} onClick={() => setView(item)}><Icon size={19} strokeWidth={1.8} aria-hidden="true"/><span className="student-nav-text">{titles[item]}</span></button>; })}
       <div className="student-account"><div className="student-avatar"><UserRound size={18}/></div><div><strong>{student.displayName}</strong><small>{student.libraryNumber}</small></div><button aria-label="Sign out" title="Sign out" onClick={() => void signOut()}><LogOut size={16}/></button></div>
     </aside>
     <main className="student-main">
