@@ -12,7 +12,6 @@ import {
   CircleHelp,
   Home,
   Info,
-  LibraryBig,
   LogIn,
   Mail,
   Menu,
@@ -158,9 +157,9 @@ export default function HomePage() {
     <main>
       <section id="features" className="section section-features">
         <div className="section-heading" data-reveal>
-          <p className="section-overline">LIBRARY TOOLS</p>
-          <h2>One system for the <span>daily workflow.</span></h2>
-          <p>Follow a student from account creation and library visits through book checkout and return.</p>
+          <p className="section-overline">WHAT LIBTRACK HANDLES</p>
+          <h2>Everyday library work, <span>kept together.</span></h2>
+          <p>Student accounts, catalogue records, attendance, and book circulation in one shared workspace.</p>
         </div>
         <div className="feature-grid">
           {featureAreas.map(({ title, detail, icon: Icon }, index) => <article className="feature-card" data-reveal key={title} style={{ '--reveal-order': index } as CSSProperties}>
@@ -175,24 +174,26 @@ export default function HomePage() {
 
       <section id="how-it-works" className="section section-workflow">
         <div className="workflow-heading" data-reveal>
-          <p className="section-overline">DAILY LIBRARY FLOW</p>
-          <h2>One student record. <span>Every step recorded.</span></h2>
-          <p>Here is how students and library staff use LibTrack from sign-up to return.</p>
+          <p className="section-overline">HOW THE WORKFLOW RUNS</p>
+          <h2>From student sign-up <span>to book return.</span></h2>
+          <p>Each step updates the same records used by students and library staff.</p>
         </div>
         <div className="workflow-steps">
-          <article className="workflow-step" data-reveal><span className="step-number">01</span><div className="step-connector"><span /></div><h3>Students create accounts</h3><p>A student enters their index number, name, programme, level, email, and password. LibTrack creates their member profile with the account.</p></article>
-          <article className="workflow-step" data-reveal><span className="step-number">02</span><div className="step-connector"><span /></div><h3>Staff prepare books</h3><p>Staff add titles and copies, assign a barcode to each copy, and check which copies are available.</p></article>
-          <article className="workflow-step" data-reveal><span className="step-number">03</span><div className="step-connector"><span /></div><h3>Students record library visits</h3><p>Students scan the entrance QR posted at the library with their phone. The first scan checks them in; scanning again records checkout.</p></article>
-          <article className="workflow-step" data-reveal><span className="step-number">04</span><div className="step-connector"><span /></div><h3>Staff lend and receive books</h3><p>Staff select the student and book copy, then record checkout, renewal, or return. Students can review due dates and borrowing history in their portal.</p></article>
+          <article className="workflow-step" data-reveal><span className="step-number">01</span><div className="workflow-step-copy"><h3>Students create accounts</h3><p>A student enters their index number, name, programme, level, email, and password. LibTrack creates their member profile with the account.</p></div></article>
+          <article className="workflow-step" data-reveal><span className="step-number">02</span><div className="workflow-step-copy"><h3>Staff prepare books</h3><p>Staff add titles and copies, assign a barcode to each copy, and check which copies are available.</p></div></article>
+          <article className="workflow-step" data-reveal><span className="step-number">03</span><div className="workflow-step-copy"><h3>Students record library visits</h3><p>Students scan the entrance QR posted at the library with their phone. The first scan checks them in; scanning again records checkout.</p></div></article>
+          <article className="workflow-step" data-reveal><span className="step-number">04</span><div className="workflow-step-copy"><h3>Staff lend and receive books</h3><p>Staff select the student and book copy, then record checkout, renewal, or return. Students can review due dates and borrowing history in their portal.</p></div></article>
         </div>
       </section>
 
       <section id="about" className="section section-about">
-        <div className="about-mark" data-reveal><span className="about-orbit" /><span className="about-icon"><LibraryBig size={36} /></span><span className="about-dot" /></div>
-        <div className="about-copy" data-reveal>
+        <div className="about-heading" data-reveal>
           <p className="section-overline">ABOUT LIBTRACK</p>
           <h2>One library. Shared, up-to-date records.</h2>
+        </div>
+        <div className="about-copy" data-reveal>
           <p>LibTrack gives students a place to find books, check their loans, and view library visits. Staff manage student records, the catalogue, entrance attendance, loans, returns, holds, and reports from the staff workspace.</p>
+          <div className="about-roles" aria-label="LibTrack interfaces"><span>Student portal</span><span>Staff workspace</span><span>Entrance kiosk</span></div>
           <a href="#features" className="text-link">Explore the workspace <ArrowRight size={16} /></a>
         </div>
       </section>
@@ -209,7 +210,7 @@ export default function HomePage() {
       <section className="final-cta" data-reveal>
         <div className="cta-glow" aria-hidden="true" />
         <p className="section-overline">STUDENT ACCESS</p>
-        <h2>Keep your library activity close.</h2>
+        <h2>Keep your library activity in view.</h2>
         <p>Create a student account to browse the catalogue, check due dates, review your loans, and see recorded library visits.</p>
         <Link className="button button-gold" to="/create-account">Create student account <ArrowRight size={17} /></Link>
       </section>
