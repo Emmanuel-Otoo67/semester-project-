@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
-import { Camera, Check, LibraryBig, LogOut, ScanLine } from 'lucide-react';
+import { Camera, Check, LogOut, ScanLine } from 'lucide-react';
+import { BrandLogo } from '../components/BrandLogo';
 import { apiFetch } from '../api/http';
 
 type ScanResult = { action: 'CHECKED_IN' | 'CHECKED_OUT'; message: string };
@@ -58,7 +59,7 @@ export function KioskPage({ token, staffName, signOut }: { token?: string; staff
   }, [scanning, processScan]);
 
   return <main className="kiosk-shell">
-    <header className="kiosk-header"><div className="kiosk-brand"><span><LibraryBig size={22}/></span><strong>libtrack<span>.</span></strong></div><div><small>LIBRARY ENTRANCE</small><span className="kiosk-staff">{staffName}</span><button aria-label="Sign out" onClick={() => void signOut()}><LogOut size={17}/></button></div></header>
+    <header className="kiosk-header"><div className="kiosk-brand"><BrandLogo className="brand-logo-kiosk" /></div><div><small>LIBRARY ENTRANCE</small><span className="kiosk-staff">{staffName}</span><button aria-label="Sign out" onClick={() => void signOut()}><LogOut size={17}/></button></div></header>
     <section className="kiosk-content">
       <div className="kiosk-intro"><span>STUDENT ATTENDANCE</span><h1>Welcome to the library</h1><p>Scan your personal LibTrack QR code when you arrive and again when you leave.</p></div>
       {result ? <section className={`kiosk-result ${result.action === 'CHECKED_IN' ? 'arrival' : 'departure'}`} role="status"><span><Check size={31}/></span><h2>{result.message}</h2><p>Your library attendance has been recorded.</p><small>Returning to scan mode…</small></section> : error ? <section className="kiosk-result kiosk-failure" role="alert"><h2>Unable to record this visit</h2><p>{error}</p><button onClick={() => { setError(''); setScanning(true); }}>Try again</button></section> : <>

@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
-import { ArrowRight, LibraryBig, LoaderCircle } from 'lucide-react';
+import { ArrowRight, LoaderCircle } from 'lucide-react';
+import { BrandLogo } from '../components/BrandLogo';
 import { AuthProvider, useAuth } from '../auth/AuthProvider';
 import { StudentSignupProvider, useStudentSignup } from '../auth/StudentSignupProvider';
 import AccountPage from '../pages/AccountPage';
@@ -12,13 +13,13 @@ const KioskPage = lazy(() => import('../portal/KioskPage').then(module => ({ def
 const localDemoMode = import.meta.env.VITE_LIBTRACK_LOCAL_DEV === 'true';
 
 function SignInChoiceRoute() {
-  return <main className="auth-shell"><section className="auth-card">
-    <div className="auth-brand"><span className="auth-brand-mark"><LibraryBig size={22} /></span><span>libtrack<span className="brand-dot">.</span></span></div>
-    <p className="auth-kicker">WELCOME BACK</p><h1>Choose your portal</h1>
+  return <main className="auth-shell portal-choice-shell"><section className="auth-card portal-choice-card" aria-labelledby="portal-choice-title">
+    <div className="auth-brand"><BrandLogo className="brand-logo-auth-card" /></div>
+    <p className="auth-kicker">WELCOME BACK</p><h1 id="portal-choice-title">Choose your portal</h1>
     <p className="auth-copy">Students and library staff use separate sign-in pages.</p>
-    <Link className="auth-primary" to="/student/sign-in">Student sign in <ArrowRight size={17} /></Link>
-    <Link className="auth-secondary" to="/staff/sign-in">Staff sign in <ArrowRight size={17} /></Link>
-    <p className="account-switch">New student? <Link to="/create-account">Create a student account</Link></p>
+    <Link className="auth-primary portal-choice-student" to="/student/sign-in">Student sign in <ArrowRight size={17} /></Link>
+    <Link className="auth-secondary portal-choice-staff" to="/staff/sign-in">Staff sign in <ArrowRight size={17} /></Link>
+    <p className="account-switch portal-choice-signup">New student? <Link to="/create-account">Create a student account</Link></p>
   </section></main>;
 }
 
@@ -47,7 +48,7 @@ function DashboardRoute() {
   if (!localDevelopment) return <Navigate to="/sign-in" replace />;
 
   return <main className="auth-shell"><section className="auth-card">
-    <div className="auth-brand"><span className="auth-brand-mark"><LibraryBig size={22} /></span><span>libtrack<span className="brand-dot">.</span></span></div>
+    <div className="auth-brand"><BrandLogo className="brand-logo-auth-card" /></div>
     <p className="auth-kicker">LOCAL DEVELOPMENT</p><h1>Local workspace unavailable</h1>
     <p className="auth-copy" role="alert">{error ?? 'The API did not confirm local development mode.'}</p>
     <button className="auth-primary" type="button" onClick={() => void refresh()}>Try again <ArrowRight size={17} /></button>

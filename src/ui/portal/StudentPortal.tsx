@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Clock3, GraduationCap, LibraryBig, LogOut, Search, UserRound } from 'lucide-react';
+import { BookOpen, Clock3, GraduationCap, LogOut, Search, UserRound } from 'lucide-react';
 import { apiFetch } from '../api/http';
 import type { StudentSession } from '../auth/AuthProvider';
 import { QRCodeSVG } from 'qrcode.react';
+import { BrandLogo } from '../components/BrandLogo';
 
 type Page<T> = { items: T[]; total: number };
 type Book = { id: string; title: string; isbn: string | null; authors: string; categories: string; copies: number; availableCopies: number; description: string | null };
@@ -47,7 +48,7 @@ export function StudentPortal({ student, token, signOut }: { student: StudentSes
 
   return <div className="student-shell">
     <aside className="student-sidebar">
-      <div className="student-brand"><span><LibraryBig size={22}/></span><strong>libtrack<span>.</span></strong></div>
+      <div className="student-brand"><BrandLogo className="brand-logo-sidebar" /></div>
       <p className="student-nav-label">STUDENT PORTAL</p>
       {(Object.keys(titles) as View[]).map(item => <button key={item} className={`student-nav-item ${view === item ? 'selected' : ''}`} onClick={() => setView(item)}>{titles[item]}</button>)}
       <div className="student-account"><div className="student-avatar"><UserRound size={18}/></div><div><strong>{student.displayName}</strong><small>{student.libraryNumber}</small></div><button aria-label="Sign out" title="Sign out" onClick={() => void signOut()}><LogOut size={16}/></button></div>

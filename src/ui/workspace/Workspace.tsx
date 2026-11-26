@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { LibraryBig, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { apiFetch } from '../api/http';
 import { NotificationPlaceholder } from '../components/NotificationPlaceholder';
+import { BrandLogo } from '../components/BrandLogo';
 
 type Page<T> = { items: T[]; page: number; size: number; total: number };
 type Book = { id: string; title: string; isbn: string | null; publisher: string | null; publicationYear: number | null; description: string | null; authors: string; categories: string; copies: number; availableCopies: number };
@@ -101,7 +102,7 @@ export function Workspace({ staff, token, localDevelopment, signOut }: { staff: 
 
   const title: Record<View,string> = {overview:'Library overview',catalog:'Book catalogue',members:'Library members',attendance:'Library attendance',loans:'Loan desk',holds:'Hold queue',reports:'Library reports',staff:'Staff access',settings:'Library policy',audit:'Audit log'};
   return <div className="workspace-shell">
-    <aside className="workspace-nav"><div className="auth-brand"><span className="auth-brand-mark"><LibraryBig size={21} /></span><span>libtrack<span className="brand-dot">.</span></span></div>
+    <aside className="workspace-nav"><div className="auth-brand"><BrandLogo className="brand-logo-sidebar" /></div>
       <p className="workspace-nav-label">LIBRARY</p>
       <Link className="workspace-nav-item workspace-nav-link" to="/kiosk">Entrance kiosk</Link>
       {(['overview','members','attendance','catalog','loans','holds','reports',...(staff.role==='ADMIN'?['staff','settings','audit']:[])] as View[]).map((item) => <button key={item} className={`workspace-nav-item ${view===item?'selected':''}`} onClick={() => {setView(item);setQuery('');setVisitFrom('');setVisitTo('');}}>{title[item]}</button>)}

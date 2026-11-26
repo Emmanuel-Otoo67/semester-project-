@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Eye, EyeOff, LibraryBig } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { BrandLogo } from '../components/BrandLogo';
 import type { StudentSignupDetails } from '../auth/StudentSignupDetails';
 
 export type AccountMode = 'sign-in' | 'create-account' | 'forgot-password' | 'reset-password';
@@ -131,7 +132,7 @@ export default function AccountPage({ mode, localDemo, onSignIn, signInAudience 
 
   return <div className="account-shell">
     <aside className="account-aside">
-      <Link className="account-brand" to="/" aria-label="LibTrack home"><span><LibraryBig size={19} /></span>LibTrack</Link>
+      <Link className="account-brand" to="/" aria-label="LibTrack home"><BrandLogo className="brand-logo-account" /></Link>
       <div className="account-aside-copy"><span className="account-aside-line" /><p>Track <i>•</i> Manage <i>•</i> Stay Ahead</p><h2>A clearer way to keep your library moving.</h2><span className="account-aside-note">Your library workspace, thoughtfully arranged.</span></div>
       <div className="account-aside-orbit account-aside-orbit-one" aria-hidden="true" /><div className="account-aside-orbit account-aside-orbit-two" aria-hidden="true" />
       <span className="account-aside-footer">LIBTRACK · LIBRARY WORKSPACE</span>
@@ -139,7 +140,7 @@ export default function AccountPage({ mode, localDemo, onSignIn, signInAudience 
     <main className="account-main">
       <div className="account-topline"><Link to="/" className="account-home-link"><ArrowLeft size={15} /> Back to home</Link><span>LIBTRACK ACCOUNT</span></div>
       <section className="account-card">
-        <div className="account-mobile-brand"><span><LibraryBig size={17} /></span>LibTrack</div>
+        <div className="account-mobile-brand"><BrandLogo className="brand-logo-mobile" /></div>
         <p className="account-kicker">{mode === 'sign-in' ? 'WELCOME BACK' : mode === 'create-account' ? 'GET STARTED' : 'ACCOUNT HELP'}</p>
         <h1>{title}</h1>
         <p className="account-intro">{mode === 'sign-in'

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
+import { BrandLogo } from '../components/BrandLogo';
 import {
   ArrowDown,
   ArrowRight,
@@ -110,8 +111,7 @@ export default function HomePage() {
       <div className="hero-parallax" ref={parallaxRef} aria-hidden="true" />
       <header className="site-header">
         <Link className="site-brand" to="/" aria-label="LibTrack home" onClick={closeMenu}>
-          <span className="site-brand-mark"><LibraryBig size={19} strokeWidth={2.2} /></span>
-          <span>LibTrack</span>
+          <BrandLogo className="brand-logo-site" />
         </Link>
         <button className="site-menu-toggle" type="button" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={menuOpen} aria-controls="site-navigation" onClick={() => setMenuOpen(value => !value)}>
           {menuOpen ? <X size={21} /> : <Menu size={21} />}
@@ -128,8 +128,8 @@ export default function HomePage() {
           <h1>Welcome to <span>LibTrack</span></h1>
           <p className="hero-description">A clear, considered workspace for your library’s collection, members, and everyday circulation.</p>
           <div className="hero-actions">
-            <Link className="button button-gold" to="/create-account">Get started <ArrowRight size={17} /></Link>
-            <a className="button button-outline" href="#how-it-works"><span className="play-mark">▶</span> Watch demo</a>
+            <Link className="button button-gold" to="/create-account">Create student account <ArrowRight size={17} /></Link>
+            <a className="button button-outline" href="#features">Explore features <ArrowDown size={16} /></a>
           </div>
           <div className="hero-proof"><span><Check size={14} /> A focused library workspace</span><span className="proof-divider" /><span>Built around your daily work</span></div>
         </div>
@@ -196,7 +196,7 @@ export default function HomePage() {
         <div className="faq-intro" data-reveal><p className="section-overline">FAQ</p><h2>A few useful details.</h2><p>More product and contact information can be added as it is finalized.</p></div>
         <div className="faq-list" data-reveal>
           <details><summary>What can I manage in LibTrack?<ChevronDown size={17} /></summary><p>The current workspace includes the catalogue, members, loans, holds, audit log, settings, and staff areas.</p></details>
-          <details><summary>Does this demo create a real account?<ChevronDown size={17} /></summary><p>No. The local sign-in and account screens demonstrate the interface. They do not save credentials or create accounts.</p></details>
+          <details><summary>How do students and staff access LibTrack?<ChevronDown size={17} /></summary><p>Students can create an account from the student sign-up page. Staff sign in with accounts created by library management.</p></details>
           <details><summary>Where can I find contact information?<ChevronDown size={17} /></summary><p>LibTrack contact details will be added here when they are ready.</p></details>
         </div>
       </section>
@@ -206,15 +206,15 @@ export default function HomePage() {
         <p className="section-overline">Your library workspace</p>
         <h2>Bring the day’s work into focus.</h2>
         <p>Explore the LibTrack interface and see how its current workspace is organized.</p>
-        <Link className="button button-gold" to="/create-account">Get started <ArrowRight size={17} /></Link>
+        <Link className="button button-gold" to="/create-account">Create student account <ArrowRight size={17} /></Link>
       </section>
     </main>
 
     <footer id="contact" className="site-footer">
       <div className="footer-main">
-        <div className="footer-brand-block"><Link className="site-brand footer-brand" to="/"><span className="site-brand-mark"><LibraryBig size={18} /></span><span>LibTrack</span></Link><p>A considered workspace for library operations.</p></div>
+        <div className="footer-brand-block"><Link className="site-brand footer-brand" to="/" aria-label="LibTrack home"><BrandLogo className="brand-logo-footer" /></Link><p>A considered workspace for library operations.</p></div>
         <div className="footer-links"><span>Explore</span><a href="#features">Features</a><a href="#about">About</a><a href="#faq">FAQ</a></div>
-        <div className="footer-links"><span>Account</span><Link to="/sign-in">Sign in</Link><Link to="/create-account">Create account</Link><span className="footer-placeholder">Contact details coming soon</span></div>
+        <div className="footer-links"><span>Account</span><Link to="/sign-in">Sign in</Link><Link to="/create-account">Create account</Link></div>
       </div>
       <div className="footer-bottom"><span>© {new Date().getFullYear()} LibTrack</span><span>Library workspace</span></div>
     </footer>
@@ -224,7 +224,7 @@ export default function HomePage() {
 function DashboardPreview() {
   return <div className="dashboard-preview" role="img" aria-label="LibTrack dashboard preview">
     <div className="preview-sidebar">
-      <div className="preview-brand"><span><LibraryBig size={14} /></span><b>LibTrack</b></div>
+      <div className="preview-brand"><BrandLogo className="brand-logo-preview" /></div>
       <small>LIBRARY</small>
       <div className="preview-nav-item selected"><span className="preview-nav-dot" />Overview</div>
       <div className="preview-nav-item"><BookOpen size={13} />Catalog</div>
