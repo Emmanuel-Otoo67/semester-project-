@@ -19,6 +19,7 @@ async function createMemberProfile(details: StudentSignupDetails, session: Sessi
       lastName: details.lastName,
       programme: details.programme,
       level: details.level,
+      ...(details.phone?.trim() ? { phone: details.phone.trim() } : {}),
     }),
   }, session.access_token);
 }

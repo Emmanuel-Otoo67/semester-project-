@@ -31,13 +31,14 @@ public class StudentIdentityRepository {
         String indexNumber = request.libraryNumber().trim().toUpperCase(Locale.ROOT);
         return !jdbc.query("""
                 insert into public.members as member
-                    (library_number,first_name,last_name,member_type,email,programme,level,status,auth_user_id)
-                select ?,?,?, 'STUDENT',?,?,?, 'ACTIVE',?
+                    (library_number,first_name,last_name,member_type,email,phone,programme,level,status,auth_user_id)
+                select ?,?,?, 'STUDENT',?,?,?,?, 'ACTIVE',?
                 on conflict (library_number) do update
                    set auth_user_id=excluded.auth_user_id,
                        first_name=excluded.first_name,
                        last_name=excluded.last_name,
                        email=excluded.email,
+                       phone=excluded.phone,
                        programme=excluded.programme,
                        level=excluded.level,
                        updated_at=now()
@@ -49,6 +50,7 @@ public class StudentIdentityRepository {
                 returning id
                 """, (rs, row) -> rs.getObject("id", UUID.class), indexNumber,
                 request.firstName().trim(), request.lastName().trim(), accountEmail,
+                request.phone() == null || request.phone().isBlank() ? null : request.phone().trim(),
                 request.programme().trim(), request.level().trim(), authUserId).isEmpty();
     }
 }

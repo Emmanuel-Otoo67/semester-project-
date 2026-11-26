@@ -84,13 +84,12 @@ class AttendanceServiceTest {
     void kioskScanChecksStudentInAndReturnsOnlyTheAction() {
         UUID scanId = UUID.randomUUID();
         when(repository.beginKioskScan(scanId)).thenReturn(true);
-        when(repository.memberIdForLibraryNumber("S-101")).thenReturn(Optional.of(studentId));
         when(repository.lockStudent(studentId)).thenReturn(Optional.of(new AttendanceRepository.Student(studentId, "STUDENT", "ACTIVE")));
         when(repository.findOpenVisitForMember(studentId)).thenReturn(Optional.empty());
         var visit = visit(UUID.randomUUID(), studentId, null);
         when(repository.createVisit(studentId, staffId)).thenReturn(visit);
 
-        var result = service.kioskScan(scanId, "S-101", staffId);
+        var result = service.kioskScan(scanId, studentId.toString(), staffId);
 
         assertEquals("CHECKED_IN", result.action());
         verify(audit).record(staffId, "LIBRARY_VISIT_CHECKED_IN", "LIBRARY_VISIT", visit.id());
@@ -100,8 +99,7 @@ class AttendanceServiceTest {
     void kioskRejectsDuplicateScanKeysWithoutTogglingAttendance() {
         UUID scanId = UUID.randomUUID();
         when(repository.beginKioskScan(scanId)).thenReturn(false);
-        assertThrows(AttendanceConflictException.class, () -> service.kioskScan(scanId, "S-101", staffId));
-        verify(repository, never()).memberIdForLibraryNumber("S-101");
+        assertThrows(AttendanceConflictException.class, () -> service.kioskScan(scanId, studentId.toString(), staffId));
     }
 
     @Test
@@ -109,13 +107,12 @@ class AttendanceServiceTest {
         UUID scanId = UUID.randomUUID();
         var open = visit(UUID.randomUUID(), studentId, null);
         when(repository.beginKioskScan(scanId)).thenReturn(true);
-        when(repository.memberIdForLibraryNumber("S-101")).thenReturn(Optional.of(studentId));
         when(repository.lockStudent(studentId)).thenReturn(Optional.of(new AttendanceRepository.Student(studentId, "STUDENT", "ACTIVE")));
         when(repository.findOpenVisitForMember(studentId)).thenReturn(Optional.of(open));
         when(repository.lockOpenVisit(open.id())).thenReturn(Optional.of(open));
         when(repository.checkOut(open.id(), staffId)).thenReturn(visit(open.id(), studentId, OffsetDateTime.now()));
 
-        var result = service.kioskScan(scanId, "S-101", staffId);
+        var result = service.kioskScan(scanId, studentId.toString(), staffId);
 
         assertEquals("CHECKED_OUT", result.action());
         verify(audit).record(staffId, "LIBRARY_VISIT_CHECKED_OUT", "LIBRARY_VISIT", open.id());

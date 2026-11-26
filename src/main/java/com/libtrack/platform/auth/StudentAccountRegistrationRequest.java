@@ -8,5 +8,6 @@ public record StudentAccountRegistrationRequest(
         @NotBlank @Size(max = 100) String firstName,
         @NotBlank @Size(max = 100) String lastName,
         @NotBlank @Size(max = 160) String programme,
-        @NotBlank @Size(max = 80) String level) {
+        @NotBlank @Size(max = 80) String level,
+        @Size(max = 40) String phone) {
 }

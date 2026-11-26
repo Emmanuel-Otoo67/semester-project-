@@ -64,7 +64,8 @@ describe('LibTrack librarian attendance and student setup', () => {
     renderWorkspace();
     fireEvent.click(await screen.findByRole('button', { name: 'Library attendance' }));
     await screen.findAllByText('Ama Mensah');
-    fireEvent.change(screen.getByRole('combobox', { name: 'Student to check in' }), { target: { value: 'student-1' } });
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Student to check in' }), { target: { value: 'Ama' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Ama Mensah/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Record arrival' }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith('/api/v1/attendance/check-in')
       && init?.method === 'POST' && String(init.body).includes('"memberId":"student-1"'))).toBe(true));

@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { BrandLogo } from '../components/BrandLogo';
 import type { StudentSignupDetails } from '../auth/StudentSignupDetails';
@@ -28,11 +28,13 @@ const titleByMode: Record<AccountMode, string> = {
 
 export default function AccountPage({ mode, localDemo, onSignIn, signInAudience = 'STUDENT', authError, signInDisabled, sessionPresent, onRetry, onSignOut, onCreateStudent }: AccountPageProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [indexNumber, setIndexNumber] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [programme, setProgramme] = useState('');
   const [level, setLevel] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -53,6 +55,7 @@ export default function AccountPage({ mode, localDemo, onSignIn, signInAudience 
     if (mode === 'create-account' && !lastName.trim()) next.lastName = 'Enter your last name.';
     if (mode === 'create-account' && !programme.trim()) next.programme = 'Enter your programme or department.';
     if (mode === 'create-account' && !level.trim()) next.level = 'Enter your level or year.';
+    if (mode === 'create-account' && phone.trim() && phone.replace(/\D/g, '').length < 7) next.phone = 'Enter a valid telephone number.';
     if (asksEmail) {
       if (!email.trim()) next.email = 'Enter your email address.';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = 'Enter a valid email address.';
@@ -89,7 +92,9 @@ export default function AccountPage({ mode, localDemo, onSignIn, signInAudience 
       try {
         await onSignIn(email.trim(), password, signInAudience);
         setPassword('');
-        navigate(signInAudience === 'STAFF' ? '/dashboard' : '/student');
+        const returnTo = (location.state as { returnTo?: unknown } | null)?.returnTo;
+        const safeReturnTo = typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : null;
+        navigate(safeReturnTo ?? (signInAudience === 'STAFF' ? '/dashboard' : '/student'));
       } catch (cause) {
         setFeedback({ kind: 'error', text: cause instanceof Error ? cause.message : 'Sign-in failed. Try again.' });
       } finally {
@@ -104,7 +109,7 @@ export default function AccountPage({ mode, localDemo, onSignIn, signInAudience 
         if (!onCreateStudent) { setFeedback({ kind: 'error', text: 'Student account creation is not configured. Try again later.' }); return; }
         setSubmitting(true);
         try {
-          const result = await onCreateStudent({ indexNumber: indexNumber.trim(), firstName: firstName.trim(), lastName: lastName.trim(), programme: programme.trim(), level: level.trim() }, email.trim(), password);
+          const result = await onCreateStudent({ indexNumber: indexNumber.trim(), firstName: firstName.trim(), lastName: lastName.trim(), programme: programme.trim(), level: level.trim(), ...(phone.trim() ? { phone: phone.trim() } : {}) }, email.trim(), password);
           setPassword(''); setConfirmation('');
           if (result === 'ready') navigate('/student');
           else setFeedback({ kind: 'success', text: 'Your account was created. Check your email, then sign in to continue.' });
@@ -173,6 +178,10 @@ export default function AccountPage({ mode, localDemo, onSignIn, signInAudience 
 
           {mode === 'create-account' && <Field id="account-level" label="Level / year" error={errors.level}>
             <input id="account-level" name="level" value={level} onChange={event => setLevel(event.target.value)} required />
+          </Field>}
+
+          {mode === 'create-account' && <Field id="account-phone" label="Telephone number (optional)" error={errors.phone}>
+            <input id="account-phone" name="phone" type="tel" autoComplete="tel" maxLength={40} value={phone} onChange={event => setPhone(event.target.value)} placeholder="e.g. +233 24 123 4567" aria-invalid={Boolean(errors.phone)} aria-describedby={errors.phone ? 'account-phone-error' : undefined} />
           </Field>}
 
           {asksEmail && <Field id="account-email" label="Email address" error={errors.email}>

@@ -70,16 +70,14 @@ public class AttendanceService {
             throw new AttendanceConflictException("This scan was already processed. Please try again with a new scan.");
         }
         String value = identifier == null ? "" : identifier.trim();
-        if (value.isEmpty()) throw new AttendanceConflictException("Enter a library number or scan a student QR code.");
         UUID memberId;
         try {
             memberId = UUID.fromString(value);
-        } catch (IllegalArgumentException notUuid) {
-            memberId = repository.memberIdForLibraryNumber(value).orElseThrow(() ->
-                    new AttendanceConflictException("No active student matches that QR code or library number."));
+        } catch (RuntimeException notStudentQr) {
+            throw new AttendanceConflictException("Scan the LibTrack entrance QR code with your phone.");
         }
         AttendanceRepository.Student student = repository.lockStudent(memberId).orElseThrow(() ->
-                new AttendanceConflictException("No active student matches that QR code or library number."));
+                new AttendanceConflictException("No active student matches that QR code."));
         if (!"STUDENT".equals(student.memberType()) || !"ACTIVE".equals(student.status())) {
             throw new AttendanceConflictException("This student account is not active.");
         }
@@ -90,6 +88,28 @@ public class AttendanceService {
         }
         AttendanceRecord visit = repository.createVisit(memberId, actorId);
         audit.record(actorId, "LIBRARY_VISIT_CHECKED_IN", "LIBRARY_VISIT", visit.id());
+        return new KioskAction("CHECKED_IN");
+    }
+
+    @Transactional
+    public KioskAction studentEntranceScan(UUID scanId, UUID memberId) {
+        if (!repository.beginKioskScan(scanId)) {
+            throw new AttendanceConflictException("This entrance scan was already processed.");
+        }
+        AttendanceRepository.Student student = repository.lockStudent(memberId)
+                .orElseThrow(() -> new MemberNotFoundException("Student not found."));
+        if (!"STUDENT".equals(student.memberType()) || !"ACTIVE".equals(student.status())) {
+            throw new AttendanceConflictException("Only active student accounts can record a library visit.");
+        }
+        var openVisit = repository.findOpenVisitForMember(memberId);
+        if (openVisit.isPresent()) {
+            AttendanceRecord visit = repository.studentCheckOut(openVisit.get().id());
+            if (visit == null) throw new AttendanceConflictException("This library visit was already checked out.");
+            audit.record(null, "LIBRARY_VISIT_CHECKED_OUT", "LIBRARY_VISIT", visit.id());
+            return new KioskAction("CHECKED_OUT");
+        }
+        AttendanceRecord visit = repository.createStudentVisit(memberId);
+        audit.record(null, "LIBRARY_VISIT_CHECKED_IN", "LIBRARY_VISIT", visit.id());
         return new KioskAction("CHECKED_IN");
     }
 }

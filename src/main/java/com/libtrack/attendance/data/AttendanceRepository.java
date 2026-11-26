@@ -27,11 +27,6 @@ public class AttendanceRepository {
                         rs.getString("member_type"), rs.getString("status"))) : Optional.empty(), memberId);
     }
 
-    public Optional<UUID> memberIdForLibraryNumber(String libraryNumber) {
-        return jdbc.query("select id from public.members where lower(library_number)=lower(?) and member_type='STUDENT'",
-                rs -> rs.next() ? Optional.of(rs.getObject("id", UUID.class)) : Optional.empty(), libraryNumber.trim());
-    }
-
     public boolean beginKioskScan(UUID scanId) {
         jdbc.update("delete from public.library_kiosk_scans where scanned_at < now() - interval '1 day'");
         return jdbc.update("insert into public.library_kiosk_scans(scan_id) values (?) on conflict (scan_id) do nothing", scanId) == 1;
@@ -54,9 +49,21 @@ public class AttendanceRepository {
         return findById(id);
     }
 
+    public AttendanceRecord createStudentVisit(UUID memberId) {
+        UUID id = jdbc.queryForObject("insert into public.library_visits(member_id) values (?) returning id",
+                UUID.class, memberId);
+        return findById(id);
+    }
+
     public AttendanceRecord checkOut(UUID visitId, UUID actorId) {
         int changed = jdbc.update("update public.library_visits set checked_out_at=now(),checked_out_by=? where id=? and checked_out_at is null",
                 actorId, visitId);
+        if (changed == 0) return null;
+        return findById(visitId);
+    }
+
+    public AttendanceRecord studentCheckOut(UUID visitId) {
+        int changed = jdbc.update("update public.library_visits set checked_out_at=now(),checked_out_by=null where id=? and checked_out_at is null", visitId);
         if (changed == 0) return null;
         return findById(visitId);
     }

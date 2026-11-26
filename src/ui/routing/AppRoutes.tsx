@@ -9,6 +9,7 @@ import HomePage from '../pages/HomePage';
 import { Workspace, WorkspaceLoading } from '../workspace/Workspace';
 const StudentPortal = lazy(() => import('../portal/StudentPortal').then(module => ({ default: module.StudentPortal })));
 const KioskPage = lazy(() => import('../portal/KioskPage').then(module => ({ default: module.KioskPage })));
+const EntranceAttendancePage = lazy(() => import('../portal/EntranceAttendancePage').then(module => ({ default: module.EntranceAttendancePage })));
 
 const localDemoMode = import.meta.env.VITE_LIBTRACK_LOCAL_DEV === 'true';
 
@@ -68,7 +69,15 @@ function KioskRoute() {
   if (loading) return <WorkspaceLoading />;
   if (student && session) return <Navigate to="/student" replace />;
   if (!staff || (!session && !localDevelopment)) return <Navigate to="/sign-in" replace />;
-  return <Suspense fallback={<WorkspaceLoading />}><KioskPage token={session?.access_token} staffName={staff.displayName} signOut={signOut} /></Suspense>;
+  return <Suspense fallback={<WorkspaceLoading />}><KioskPage staffName={staff.displayName} signOut={signOut} /></Suspense>;
+}
+
+function StudentEntranceRoute() {
+  const { loading, session, student, staff } = useAuth();
+  if (loading) return <WorkspaceLoading />;
+  if (staff && session) return <Navigate to="/dashboard" replace />;
+  if (!student || !session) return <Navigate to="/student/sign-in" state={{ returnTo: '/entrance' }} replace />;
+  return <Suspense fallback={<WorkspaceLoading />}><EntranceAttendancePage token={session.access_token} studentName={student.displayName} /></Suspense>;
 }
 
 function WithAuth({ children, restoreSessionOnMount = true }: { children: ReactNode; restoreSessionOnMount?: boolean }) {
@@ -93,6 +102,7 @@ export default function AppRoutes() {
     <Route path="/dashboard" element={<WithAuth><DashboardRoute /></WithAuth>} />
     <Route path="/student" element={<WithAuth><StudentRoute /></WithAuth>} />
     <Route path="/kiosk" element={<WithAuth><KioskRoute /></WithAuth>} />
+    <Route path="/entrance" element={<WithAuth><StudentEntranceRoute /></WithAuth>} />
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>;
 }

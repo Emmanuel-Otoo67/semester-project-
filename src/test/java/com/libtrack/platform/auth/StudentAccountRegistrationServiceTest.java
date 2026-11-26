@@ -15,7 +15,7 @@ class StudentAccountRegistrationServiceTest {
     private final StudentIdentityRepository students = mock(StudentIdentityRepository.class);
     private final StudentAccountRegistrationService service = new StudentAccountRegistrationService(students);
     private static final StudentAccountRegistrationRequest REQUEST = new StudentAccountRegistrationRequest(
-            "S-101", "Ama", "Mensah", "Computer Science", "Level 300");
+            "S-101", "Ama", "Mensah", "Computer Science", "Level 300", "+233241234567");
 
     @Test
     void createsStudentProfileAsPartOfAccountRegistration() {

@@ -25,7 +25,7 @@ import {
 const featureAreas = [
   { title: 'Books and copies', detail: 'Add titles, record copy barcodes, edit catalogue details, and check availability.', icon: BookOpen },
   { title: 'Student accounts', detail: 'Students sign up with their details; LibTrack creates the member profile used by staff.', icon: UsersRound },
-  { title: 'Entrance attendance', detail: 'At the kiosk, scan a student QR code or enter their index number to record arrival and departure.', icon: Check },
+  { title: 'Entrance attendance', detail: 'Students scan the printed entrance QR from their phone to check in and scan again to check out.', icon: Check },
   { title: 'Loans and returns', detail: 'Staff check out a copy to a student, renew a loan, and record its return and due date.', icon: RefreshCw },
 ];
 
@@ -182,7 +182,7 @@ export default function HomePage() {
         <div className="workflow-steps">
           <article className="workflow-step" data-reveal><span className="step-number">01</span><div className="step-connector"><span /></div><h3>Students create accounts</h3><p>A student enters their index number, name, programme, level, email, and password. LibTrack creates their member profile with the account.</p></article>
           <article className="workflow-step" data-reveal><span className="step-number">02</span><div className="step-connector"><span /></div><h3>Staff prepare books</h3><p>Staff add titles and copies, assign a barcode to each copy, and check which copies are available.</p></article>
-          <article className="workflow-step" data-reveal><span className="step-number">03</span><div className="step-connector"><span /></div><h3>Students record library visits</h3><p>At the entrance kiosk, a student scans their QR code or enters their index number to check in. Scanning again records checkout.</p></article>
+          <article className="workflow-step" data-reveal><span className="step-number">03</span><div className="step-connector"><span /></div><h3>Students record library visits</h3><p>Students scan the entrance QR posted at the library with their phone. The first scan checks them in; scanning again records checkout.</p></article>
           <article className="workflow-step" data-reveal><span className="step-number">04</span><div className="step-connector"><span /></div><h3>Staff lend and receive books</h3><p>Staff select the student and book copy, then record checkout, renewal, or return. Students can review due dates and borrowing history in their portal.</p></article>
         </div>
       </section>
@@ -202,7 +202,7 @@ export default function HomePage() {
         <div className="faq-list" data-reveal>
           <details><summary>What can I manage in LibTrack?<ChevronDown size={17} /></summary><p>The current workspace includes the catalogue, members, loans, holds, audit log, settings, and staff areas.</p></details>
           <details><summary>How do students and staff access LibTrack?<ChevronDown size={17} /></summary><p>Students can create an account from the student sign-up page. Staff sign in with accounts created by library management.</p></details>
-          <details><summary>How is a library visit recorded?<ChevronDown size={17} /></summary><p>At the entrance kiosk, students scan their personal QR code or enter their index number. A second scan records their departure.</p></details>
+          <details><summary>How is a library visit recorded?<ChevronDown size={17} /></summary><p>Students scan the single entrance QR code posted at the library using their phone. Their first scan checks them in and the next scan checks them out. A librarian can record attendance manually for students without a phone.</p></details>
         </div>
       </section>
 

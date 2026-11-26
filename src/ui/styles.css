@@ -735,3 +735,68 @@ body{min-width:320px}
   .workspace-refresh,
   .workspace-action { transition: none !important; }
 }
+
+.workspace-inline-form.workspace-checkin-form { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.workspace-student-picker { position: relative; display: grid; min-width: 0; gap: 7px; }
+.workspace-student-picker > label { color: #3f3f3f; font-size: 12px; font-weight: 650; }
+.workspace-student-picker > input { width: 100%; min-width: 0; height: 42px; padding: 0 12px; border: 1px solid #dcdcdc; border-radius: 10px; background: rgba(255,255,255,.82); color: #171717; font: inherit; font-size: 13px; }
+.workspace-student-picker > input:focus { outline: 2px solid #fdbf2d; outline-offset: 1px; border-color: #d49b12; }
+.workspace-student-results { display: grid; max-height: 270px; overflow: auto; border: 1px solid rgba(0,0,0,.1); border-radius: 12px; background: rgba(255,255,255,.97); box-shadow: 0 14px 32px rgba(0,0,0,.09); }
+.workspace-student-results > button { display: grid; gap: 4px; width: 100%; padding: 10px 12px; border: 0; border-bottom: 1px solid rgba(0,0,0,.06); background: transparent; color: #222; text-align: left; }
+.workspace-student-results > button:hover,
+.workspace-student-results > button:focus-visible { background: rgba(253,191,45,.14); outline: none; }
+.workspace-student-results > button strong { font-size: 13px; }
+.workspace-student-results > button span,
+.workspace-student-results > p { margin: 0; color: #777; font-size: 11px; }
+.workspace-student-results > p { padding: 12px; }
+.workspace-student-selected { color: #725300; font-size: 11px; }
+.kiosk-poster-content { width: min(100% - 32px, 900px); }
+.kiosk-staff-actions { display: flex; align-items: center; gap: 14px; }
+.kiosk-poster-card { display: grid; grid-template-columns: minmax(250px,.9fr) minmax(0,1.1fr); align-items: center; gap: clamp(20px,4vw,48px); padding: clamp(20px,4vw,42px); border: 1px solid rgba(0,0,0,.08); border-radius: 24px; background: rgba(255,255,255,.86); box-shadow: 0 20px 56px rgba(18,22,30,.08); backdrop-filter: blur(18px); }
+.kiosk-poster-code { display: grid; place-items: center; padding: 20px; border: 1px solid rgba(0,0,0,.07); border-radius: 20px; background: #fff; }
+.kiosk-poster-code svg { display: block; width: min(100%, 300px); height: auto; }
+.kiosk-poster-details { min-width: 0; }
+.kiosk-poster-icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 14px; background: #fff1c9; color: #856200; }
+.kiosk-poster-details h2 { margin: 14px 0 10px; font-size: 19px; }
+.kiosk-poster-details ol { display: grid; gap: 11px; padding-left: 20px; color: #595a5d; font-size: 13px; line-height: 1.5; }
+.kiosk-poster-url { overflow-wrap: anywhere; margin: 16px 0; padding: 10px 12px; border: 1px solid #ececef; border-radius: 10px; background: #f8f8f8; color: #606166; font-size: 11px; }
+.kiosk-print-button { display: inline-flex; min-height: 43px; align-items: center; justify-content: center; gap: 9px; padding: 0 15px; border: 0; border-radius: 11px; background: #fdbf2d; color: #171717; font: inherit; font-size: 13px; font-weight: 750; }
+.kiosk-poster-details > small { display: block; margin-top: 12px; color: #85858a; font-size: 10px; line-height: 1.5; }
+.entrance-attendance-shell { min-height: 100vh; padding: 0 18px 48px; background: radial-gradient(ellipse at 50% 0%,rgba(253,191,45,.15),transparent 34%),#f5f5f3; color: #171717; font-family: Inter,'DM Sans',sans-serif; }
+.entrance-attendance-header { display: flex; min-height: 70px; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid rgba(0,0,0,.08); }
+.entrance-attendance-header > a { display: flex; min-width: 0; }
+.entrance-attendance-header > span { display: flex; align-items: center; gap: 7px; color: #756018; font-size: 10px; font-weight: 750; letter-spacing: .08em; }
+.entrance-attendance-card { display: grid; width: min(100%,500px); justify-items: center; gap: 12px; margin: clamp(40px,10vh,100px) auto 0; padding: clamp(25px,6vw,48px); border: 1px solid rgba(255,255,255,.92); border-radius: 24px; background: linear-gradient(145deg,rgba(255,255,255,.91),rgba(255,255,255,.69)); box-shadow: 0 22px 60px rgba(23,23,20,.09),inset 0 1px 0 #fff; text-align: center; backdrop-filter: blur(22px); }
+.entrance-attendance-icon { display: grid; width: 58px; height: 58px; place-items: center; border: 1px solid rgba(215,165,27,.2); border-radius: 20px; background: rgba(253,191,45,.17); color: #806000; }
+.entrance-attendance-icon.success { background: #edf5e9; color: #477444; }
+.entrance-attendance-icon.error { background: #fff0eb; color: #a54636; }
+.entrance-attendance-icon.loading svg { animation: entrance-spin 1s linear infinite; }
+.entrance-attendance-kicker { margin: 7px 0 0; color: #7a651d; font-size: 10px; font-weight: 750; letter-spacing: .1em; }
+.entrance-attendance-card h1 { margin: 0; font-size: clamp(25px,6vw,34px); letter-spacing: -.045em; }
+.entrance-attendance-card > p:not(.entrance-attendance-kicker) { max-width: 38ch; margin: 0; color: #666; font-size: 14px; line-height: 1.6; }
+.entrance-attendance-card > small { color: #858585; font-size: 11px; line-height: 1.5; }
+.entrance-attendance-link { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: 8px; margin-top: 9px; padding: 0 14px; border: 1px solid rgba(0,0,0,.1); border-radius: 11px; background: rgba(255,255,255,.76); color: #222; font: inherit; font-size: 12px; font-weight: 700; text-decoration: none; }
+.entrance-attendance-link:hover { background: rgba(253,191,45,.18); }
+@keyframes entrance-spin { to { transform: rotate(360deg); } }
+@media (max-width: 700px) {
+  .workspace-inline-form.workspace-checkin-form { grid-template-columns: minmax(0,1fr); }
+  .workspace-inline-form.workspace-checkin-form > .workspace-action { width: 100%; }
+  .kiosk-poster-card { grid-template-columns: minmax(0,1fr); }
+  .kiosk-poster-code { width: min(100%,360px); justify-self: center; }
+  .kiosk-staff-actions { gap: 8px; }
+  .kiosk-staff-actions .kiosk-staff { display: none; }
+}
+@media print {
+  .kiosk-poster-shell { min-height: 0; background: #fff; }
+  .kiosk-poster-shell .kiosk-header,
+  .kiosk-poster-shell .kiosk-intro,
+  .kiosk-poster-shell .kiosk-print-button,
+  .kiosk-poster-shell .kiosk-privacy { display: none !important; }
+  .kiosk-poster-content { width: 100%; padding: 0; }
+  .kiosk-poster-card { grid-template-columns: minmax(0,1fr) minmax(0,1fr); border: 0; box-shadow: none; backdrop-filter: none; }
+  .kiosk-poster-code { border: 0; }
+  .kiosk-poster-details > small { color: #555; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .entrance-attendance-icon.loading svg { animation: none; }
+}

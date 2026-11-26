@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { BookMarked, BookOpen, CalendarClock, CircleAlert, Clock3, GraduationCap, History, LayoutDashboard, LogOut, MapPin, Search, UserRound, type LucideIcon } from 'lucide-react';
 import { apiFetch } from '../api/http';
 import type { StudentSession } from '../auth/AuthProvider';
-import { QRCodeSVG } from 'qrcode.react';
 import { BrandLogo } from '../components/BrandLogo';
 
 type Page<T> = { items: T[]; total: number };
@@ -56,7 +55,7 @@ export function StudentPortal({ student, token, signOut }: { student: StudentSes
     catalog: 'Search the collection and check how many copies are available.',
     books: 'Review checkout dates, due dates, renewals, and returned books.',
     visits: 'See the recorded arrival and departure times for your library visits.',
-    profile: 'Your student details and the QR code used at the library entrance.',
+    profile: 'Your student contact information and how to record library attendance.',
   };
   const dateTime = (value: string) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Accra' }).format(new Date(value));
 
@@ -88,8 +87,8 @@ export function StudentPortal({ student, token, signOut }: { student: StudentSes
         <div className="student-card-heading"><div><span>ATTENDANCE HISTORY</span><h2>Your library visits</h2><p>Each visit records when you entered and when you left the library.</p></div><span className="student-card-count"><History size={15}/>{visits.length} visits</span></div>
         {!visits.length ? <div className="student-empty-state"><span><MapPin size={22}/></span><strong>No visits recorded yet</strong><p>Your entrance kiosk check-ins and check-outs will appear here.</p></div> : <div className="student-table-scroll"><table className="student-table"><thead><tr><th>DATE</th><th>CHECKED IN</th><th>CHECKED OUT</th><th>VISIT STATUS</th></tr></thead><tbody>{visits.map(visit => <tr key={visit.id}><td><strong className="student-cell-title">{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'Africa/Accra' }).format(new Date(visit.checkedInAt))}</strong></td><td>{dateTime(visit.checkedInAt)}</td><td>{visit.checkedOutAt ? dateTime(visit.checkedOutAt) : 'Still inside'}</td><td><span className={`student-status ${visit.checkedOutAt ? 'returned' : 'visit-open'}`}>{visit.checkedOutAt ? 'Complete' : 'Currently inside'}</span></td></tr>)}</tbody></table></div>}
       </section> : <section className="student-card student-profile-card">
-        <div className="student-card-heading"><div><span>STUDENT PROFILE</span><h2>Your details and entrance pass</h2><p>Use your student QR code at the library entrance kiosk.</p></div></div>
-        <div className="student-profile-layout"><dl className="student-profile"><div><dt>Full name</dt><dd>{student.displayName}</dd></div><div><dt>Student index number</dt><dd>{student.libraryNumber}</dd></div><div><dt>Programme / department</dt><dd>{student.programme || 'Not provided'}</dd></div><div><dt>Level / year</dt><dd>{student.level || 'Not provided'}</dd></div><div><dt>Email address</dt><dd>{student.email || 'Not provided'}</dd></div><div><dt>Phone</dt><dd>{student.phone || 'Not provided'}</dd></div></dl><aside className="student-qr"><span className="student-qr-heading"><MapPin size={15}/> ENTRANCE QR</span><QRCodeSVG value={student.studentId} size={145} level="Q" includeMargin/><strong>{student.displayName}</strong><small>Scan this code to record your library visit.</small></aside></div><p className="student-note">For changes to your official student details, contact a librarian.</p>
+        <div className="student-card-heading"><div><span>STUDENT PROFILE</span><h2>Your details and library entrance</h2><p>Use the entrance QR posted at the library to record your arrival and departure.</p></div></div>
+        <div className="student-profile-layout"><dl className="student-profile"><div><dt>Full name</dt><dd>{student.displayName}</dd></div><div><dt>Student index number</dt><dd>{student.libraryNumber}</dd></div><div><dt>Programme / department</dt><dd>{student.programme || 'Not provided'}</dd></div><div><dt>Level / year</dt><dd>{student.level || 'Not provided'}</dd></div><div><dt>Email address</dt><dd>{student.email || 'Not provided'}</dd></div><div><dt>Telephone number</dt><dd>{student.phone || 'Not provided'}</dd></div></dl><aside className="student-qr"><span className="student-qr-heading"><MapPin size={15}/> LIBRARY ENTRANCE</span><strong>Use the QR code posted at the entrance</strong><small>Scan it with your phone to check in when you arrive and check out when you leave. Ask a librarian for manual attendance if you do not have a phone.</small></aside></div><p className="student-note">For changes to your official student details, contact a librarian.</p>
       </section>}
     </main>
   </div>;

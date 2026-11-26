@@ -4,4 +4,5 @@ export type StudentSignupDetails = {
   lastName: string;
   programme: string;
   level: string;
+  phone?: string;
 };
